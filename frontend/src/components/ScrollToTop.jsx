@@ -6,10 +6,10 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     if (hash) {
-      const el = document.getElementById(hash.replace("#", ""));
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-      }
+      setTimeout(() => {
+        const el = document.getElementById(hash.replace("#", ""));
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 300);
     } else {
       window.scrollTo(0, 0);
     }

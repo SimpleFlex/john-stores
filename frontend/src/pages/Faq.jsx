@@ -1,8 +1,7 @@
-import React from "react";
-import SwiftProduct from "../components/SwiftProduct";
+import Faqs from "../components/Faqs";
 
 const Faq = () => {
-  return <div></div>;
+  return <faqs />;
 };
 
 export default Faq;

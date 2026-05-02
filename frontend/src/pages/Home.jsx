@@ -1,5 +1,5 @@
 import React from "react";
-import Hero from "../components/Hero";
+import HeroCarousel from "../components/HeroCarousel";
 import About from "../components/About";
 import Services from "../components/Services";
 import FeaturedProducts from "../components/FeaturedProducts";
@@ -11,7 +11,7 @@ import Reliable from "../components/Reliable";
 const Home = () => {
   return (
     <div>
-      <Hero />
+      <HeroCarousel />
       <About />
       <Services />
       <FeaturedProducts />

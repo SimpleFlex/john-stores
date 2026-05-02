@@ -57,7 +57,14 @@ const SwiftHero = () => {
 
         <div className="flex w-full ">
           {/* Founder */}
-          <button className=" gap-1 sm:gap-2 inline-flex px-2 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-[#00E27C] ">
+          <button
+            onClick={() =>
+              document
+                .getElementById("collections")
+                .scrollIntoView({ behavior: "smooth" })
+            }
+            className="gap-1 sm:gap-2 inline-flex px-2 sm:px-6 py-2 justify-center items-center rounded-[10px] cursor-pointer bg-[#00E27C]"
+          >
             <p className="font-clash-grotesk text-black text-xs sm:text-sm font-medium leading-6 text-center">
               Send a Package
             </p>

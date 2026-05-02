@@ -57,7 +57,14 @@ const JohnHero = () => {
 
         <div className="flex w-full ">
           {/* Founder */}
-          <button className=" gap-1 sm:gap-2 inline-flex px-2 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-[#F1A31D] ">
+          <button
+            onClick={() =>
+              document
+                .getElementById("shopcategory")
+                .scrollIntoView({ behavior: "smooth" })
+            }
+            className="cursor-pointer gap-1 sm:gap-2 inline-flex px-2 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-[#F1A31D] "
+          >
             <p className="font-clash-grotesk text-black text-xs sm:text-sm font-medium leading-6 text-center">
               Shop Now
             </p>

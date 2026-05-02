@@ -1,209 +1,282 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
-const OrderDetails = ({ onClose }) => {
+// ─────────────────────────────────────────────
+// WHATSAPP MESSAGE GENERATOR
+// Builds the message preview from order data
+// ─────────────────────────────────────────────
+const buildWhatsAppMessage = (
+  orderData,
+  customerName,
+  customerPhone,
+  recipientName,
+  recipientPhone,
+) => {
+  const itemLines = orderData.items
+    ?.map(
+      (item) =>
+        `* ${item.name} x${item.quantity} - ₦${item.price.toLocaleString()}`,
+    )
+    .join("\n");
+
+  return `🎁 Gift Order from ${orderData.brand || "John's Stores"}
+
+Sender: ${customerName}
+Phone: ${customerPhone}
+
+Recipient: ${recipientName}
+Phone: ${recipientPhone}
+
+Items:
+${itemLines}
+
+Subtotal: ₦${orderData.subtotal?.toLocaleString() || 0}
+Delivery: ₦${orderData.deliveryFee?.toLocaleString() || 0}
+Total: ₦${orderData.total?.toLocaleString() || 0}`;
+};
+
+// ─────────────────────────────────────────────
+// ORDER DETAILS MODAL
+// Props:
+//   onClose         — closes the modal
+//   orderData       — full order object from API
+//   onUpdateStatus  — callback(status) to update order status
+//   onUpdatePayment — callback(status) to update payment status
+//   isLoading       — disables buttons while API call is in progress
+// ─────────────────────────────────────────────
+const OrderDetails = ({
+  onClose,
+  orderData,
+  onUpdateStatus,
+  onUpdatePayment,
+  isLoading = false,
+}) => {
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState("Pending");
+  const [status, setStatus] = useState(orderData?.orderStatus || "Pending");
 
   const handleSelect = (value) => {
     setStatus(value);
     setOpen(false);
+    onUpdateStatus?.(value);
   };
 
+  const handlePaymentStatus = (value) => {
+    onUpdatePayment?.(value);
+  };
+
+  if (!orderData) return null;
+
+  // ── Extract customer & recipient safely ──
+  const customerName = orderData.customer?.name || orderData.sender || "N/A";
+  const customerPhone = orderData.customer?.phone || "N/A";
+  const recipientName = orderData.recipient?.name || "N/A";
+  const recipientPhone = orderData.recipient?.phone || "N/A";
+
+  // ── Build WhatsApp preview message ──
+  const whatsappMessage = buildWhatsAppMessage(
+    orderData,
+    customerName,
+    customerPhone,
+    recipientName,
+    recipientPhone,
+  );
+
   return (
-    <div className="flex flex-col  w-[572px] pb-[10px] gap-[10px] rounded-[16px] bg-white">
-      <div className="flex items-center h-[40px] px-[25px] border-b border-[rgba(113,113,130,0.35)]">
+    <div className="flex flex-col w-[572px] max-h-[90vh] overflow-y-auto rounded-[16px] bg-white">
+      {/* ── HEADER ─────────────────────────────── */}
+      <div className="sticky top-0 bg-white flex items-center h-[56px] px-[25px] border-b border-[rgba(113,113,130,0.35)] z-10">
         <div className="flex items-center justify-between w-full">
           <p className="text-[#2D2D2D] font-medium text-base leading-[14px] font-clash-grotesk">
-            Order Details - JS-2026-021
+            Order Details - {orderData.orderId}
           </p>
-
           <img
             src="/cancel.svg"
-            alt=""
+            alt="Close"
             onClick={onClose}
             className="cursor-pointer"
           />
         </div>
       </div>
 
-      <div className="px-[25px] flex flex-col items-start gap-[10px]">
-        {/* <div className="p-[16px] bg-[#F9F9FB flex items-center self-stretch] ">
-          <div className="text-[#2D2D2D] flex flex-col gap-2 font-normal text-[10px] leading-[20px] tracking-[-0.3px] font-dm-sans">
-            <p>🎁 Gift Order from Swift Logistics</p>
-
-            <div>
-              <p>Sender: Junior Ikenna</p>
-              <p>Phone: +234 802 345 6789</p>
-            </div>
-            <div>
-              <p>Recipient: Laurence Peter</p>
-              <p>Phone: +234 803 456 7890</p>
-            </div>
-            <div>
-              <p>Items</p>
-              <ul>
-                <li>Premium Rose Bouquet (Red, Medium) x1 - ₦4,999</li>
-                <li>Chocolate Gift Box (Large) x1 - ₦3,999</li>
-              </ul>
-            </div>
-
-            <div>
-              <p>Subtotal: ₦10,000</p>
-              <p>Delivery: ₦2,000</p>
-              <p>Total: ₦12,000</p>
-            </div>
+      <div className="px-[25px] pb-[20px] flex flex-col items-start gap-[20px] mt-[16px]">
+        {/* ── WHATSAPP ORDER MESSAGE ──────────────── */}
+        <div className="flex flex-col w-full gap-[8px]">
+          <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
+            Whatsapp Order Message
+          </p>
+          <div className="w-full rounded-[12px] bg-[#F7F7F8] p-[16px]">
+            <pre className="text-[#2D2D2D] font-normal text-[13px] leading-[22px] font-dm-sans-500 whitespace-pre-wrap">
+              {whatsappMessage}
+            </pre>
           </div>
-        </div> */}
+        </div>
 
-        <div className="flex justify-between w-[276px] items-center">
-          <div className="flex flex-col item-start gap-1">
+        {/* ── CUSTOMER & RECIPIENT ────────────────── */}
+        <div className="flex justify-between w-full items-start">
+          <div className="flex flex-col items-start gap-1">
             <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
               Customer
             </p>
             <p className="text-[#2D2D2D] font-semibold text-sm leading-[16px] tracking-[-0.3px] font-dm-sans-700">
-              Junior Ikenna
+              {customerName}
             </p>
             <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
-              +234 802 345 6789
+              {customerPhone}
             </p>
           </div>
 
-          <div className="flex flex-col item-start gap-1">
+          <div className="flex flex-col items-start gap-1">
             <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
               Recipient
             </p>
             <p className="text-[#2D2D2D] font-semibold text-sm leading-[16px] tracking-[-0.3px] font-dm-sans-700">
-              Junior Ikenna
+              {recipientName}
             </p>
             <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
-              +234 802 345 6789
+              {recipientPhone}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col w-full">
-          <div className="flex flex-col items-start gap-2 self-stretch">
-            <div className="flex items-center self-stretch p-[16px] ">
-              <div className="flex items-center w-full justify-between">
-                <div className="flex flex-col items-start self-stretch gap-1">
+        {/* ── ITEMS PURCHASED ─────────────────────── */}
+        <div className="flex flex-col w-full gap-[10px]">
+          <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
+            Items Purchased
+          </p>
+          <div className="flex flex-col w-full gap-[8px]">
+            {orderData.items?.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between w-full px-[16px] py-[14px] rounded-[12px] border border-[rgba(107,107,107,0.15)] bg-white"
+              >
+                <div className="flex flex-col items-start gap-1">
                   <p className="text-[#2D2D2D] font-semibold text-sm leading-[16px] tracking-[-0.3px] font-dm-sans-700">
-                    Premium Rose Bouquet (Red, Medium)
+                    {item.name}
                   </p>
                   <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
-                    Qty: 1
+                    Qty: {item.quantity}
                   </p>
                 </div>
-                <p className="text-[#E3494E] font-medium text-[22px] leading-[25px]  font-clash-grotesk">
-                  ₦4,999
+                <p className="text-[#E3494E] font-medium text-[22px] leading-[25px] font-clash-grotesk">
+                  ₦{item.price.toLocaleString()}
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-start gap-2 self-stretch">
-            <div className="flex items-center self-stretch p-[16px] ">
-              <div className="flex items-center w-full justify-between">
-                <div className="flex flex-col items-start self-stretch gap-1">
-                  <p className="text-[#2D2D2D] font-semibold text-sm leading-[16px] tracking-[-0.3px] font-dm-sans-700">
-                    Premium Rose Bouquet (Red, Medium)
-                  </p>
-                  <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
-                    Qty: 1
-                  </p>
-                </div>
-                <p className="text-[#E3494E] font-medium text-[22px] leading-[25px]  font-clash-grotesk">
-                  ₦4,999
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        <div className="flex flex-col w-full items-start gap-[30px]">
-          <div className="flex items-center w-full justify-between">
-            <div className="flex flex-col gap-1">
-              <p className="text-[rgba(113,113,130,0.70)] font-medium text-xs leading-[14px] font-clash-grotesk ">
-                Subtotal
-              </p>
-              <p className="text-[rgba(113,113,130,0.70)] font-medium text-xs leading-[14px] font-clash-grotesk ">
-                Delivery Fee
-              </p>
-              <p className="text-[#2D2D2D] font-semibold text-base leading-[18px] tracking-[-0.3px] font-dm-sans-700">
-                Total
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <p className="text-[#2D2D2D] font-medium text-xs leading-[14px] font-clash-grotesk ">
-                ₦10,000
-              </p>
-              <p className="text-[#2D2D2D] font-medium text-xs leading-[14px] font-clash-grotesk ">
-                ₦2,000
-              </p>
-              <p className="text-[#2D2D2D] font-semibold text-base leading-[18px] tracking-[-0.3px] font-dm-sans-700">
-                ₦12,000
-              </p>
-            </div>
+        {/* ── TOTALS ──────────────────────────────── */}
+        <div className="flex items-center w-full justify-between">
+          <div className="flex flex-col gap-[6px]">
+            <p className="text-[rgba(113,113,130,0.70)] font-medium text-xs leading-[14px] font-clash-grotesk">
+              Subtotal
+            </p>
+            <p className="text-[rgba(113,113,130,0.70)] font-medium text-xs leading-[14px] font-clash-grotesk">
+              Delivery Fee
+            </p>
+            <p className="text-[#2D2D2D] font-semibold text-base leading-[18px] tracking-[-0.3px] font-dm-sans-700">
+              Total
+            </p>
+          </div>
+          <div className="flex flex-col gap-[6px] items-end">
+            <p className="text-[#2D2D2D] font-medium text-xs leading-[14px] font-clash-grotesk">
+              ₦{orderData.subtotal?.toLocaleString() || 0}
+            </p>
+            <p className="text-[#2D2D2D] font-medium text-xs leading-[14px] font-clash-grotesk">
+              ₦{orderData.deliveryFee?.toLocaleString() || 0}
+            </p>
+            <p className="text-[#2D2D2D] font-semibold text-base leading-[18px] tracking-[-0.3px] font-dm-sans-700">
+              ₦{orderData.total?.toLocaleString() || 0}
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-2">
+        {/* ── PAYMENT CONFIRMATION ────────────────── */}
+        <div className="flex flex-col items-start gap-[10px] w-full">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Payment Confirmation
           </p>
-
-          <div className="flex gap-1">
-            <button className="flex flex-col justify-center items-center w-[85px] h-[45px] rounded-[14px] bg-[#ECECF0]">
-              <p className="text-black font-medium text-base leading-[18px] font-clash-grotesk">
+          <div className="flex gap-2">
+            {/* Paid Button */}
+            <button
+              onClick={() => handlePaymentStatus("Paid")}
+              disabled={isLoading}
+              className={`flex justify-center items-center w-[85px] h-[45px] rounded-[14px] transition-colors disabled:opacity-50 ${
+                orderData.paymentStatus === "Paid"
+                  ? "bg-[#16CB5E]"
+                  : "bg-[#ECECF0]"
+              }`}
+            >
+              <p
+                className={`font-medium text-base leading-[18px] font-clash-grotesk ${
+                  orderData.paymentStatus === "Paid"
+                    ? "text-white"
+                    : "text-black"
+                }`}
+              >
                 Paid
               </p>
             </button>
 
-            <button className="flex flex-col justify-center items-center w-[100px] h-[45px]  rounded-[12px] border border-white bg-[#16CB5E]">
-              <p className="text-white font-medium text-base leading-[18px] font-clash-grotesk">
+            {/* Pending Button */}
+            <button
+              onClick={() => handlePaymentStatus("Pending")}
+              disabled={isLoading}
+              className={`flex justify-center items-center w-[100px] h-[45px] rounded-[12px] transition-colors disabled:opacity-50 ${
+                orderData.paymentStatus === "Pending"
+                  ? "bg-[#16CB5E]"
+                  : "bg-[#ECECF0]"
+              }`}
+            >
+              <p
+                className={`font-medium text-base leading-[18px] font-clash-grotesk ${
+                  orderData.paymentStatus === "Pending"
+                    ? "text-white"
+                    : "text-black"
+                }`}
+              >
                 Pending
               </p>
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-2">
+        {/* ── UPDATE ORDER STATUS DROPDOWN ────────── */}
+        <div className="flex flex-col items-start gap-[10px] w-full">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Update Order Status
           </p>
 
-          <div className="relative w-[522px]">
-            {/* Select box */}
-            <div className="flex justify-between items-center p-[16px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white">
+          <div className="relative w-full">
+            <div
+              className="flex justify-between items-center p-[16px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white cursor-pointer"
+              onClick={() => setOpen(!open)}
+            >
               <p className="text-black font-medium text-base leading-[18px] font-dm-sans-500">
                 {status}
               </p>
-
               <img
                 src="/keyboard-arrow.svg"
-                alt=""
-                onClick={() => setOpen(!open)}
-                className={`cursor-pointer transition-transform duration-300 ${
-                  open ? "rotate-180" : ""
-                }`}
+                alt="Dropdown"
+                className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`}
               />
             </div>
 
-            {/* Dropdown */}
+            {/* Status Options */}
             {open && (
-              <div className="absolute bottom-full mb-2  w-full rounded-[10px] bg-white shadow-md border">
-                <p
-                  onClick={() => handleSelect("Pending")}
-                  className="p-3 cursor-pointer hover:bg-gray-100 rounded-[14px]"
-                >
-                  Pending
-                </p>
-                <p
-                  onClick={() => handleSelect("Paid")}
-                  className="p-3 cursor-pointer hover:bg-gray-100 rounded-[14px]"
-                >
-                  Paid
-                </p>
+              <div className="absolute top-full mt-2 w-full rounded-[10px] bg-white shadow-md border z-10">
+                {["Pending", "Processing", "Completed", "Cancelled"].map(
+                  (option) => (
+                    <div
+                      key={option}
+                      onClick={() => handleSelect(option)}
+                      className="p-3 cursor-pointer hover:bg-gray-100 rounded-[10px] transition-colors"
+                    >
+                      <p className="text-[#2D2D2D] font-medium text-sm">
+                        {option}
+                      </p>
+                    </div>
+                  ),
+                )}
               </div>
             )}
           </div>

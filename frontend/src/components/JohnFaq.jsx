@@ -51,7 +51,7 @@ const JohnFaq = () => {
   return (
     <div className="flex flex-col justify-center items-center w-full bg-[#FAFAFA] p-[70px_60px] sm:p-[70px_241px]">
       {/* Heading */}
-      <div className="mb-2.5">
+      <div id="johnfq" className="mb-2.5">
         <p className="text-[#2D2D2D] text-center font-clash-grotesk text-xl sm:text-4xl font-medium leading-6 sm:leading-12">
           Frequently Asked Questions
         </p>
