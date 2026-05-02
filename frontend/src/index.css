@@ -148,3 +148,53 @@ a.active p {
 .cart-shake {
   animation: cartShake 0.5s ease-in-out;
 }
+
+/* ───────────────────────────────────────────────
+   SMOOTH IMAGE LOADING — Prevents jarring pop-in
+   ─────────────────────────────────────────────── */
+
+/* 1. Placeholder background visible while image loads */
+img {
+  background-color: #e5e7eb;
+}
+
+/* 2. Smooth fade-in when image finishes loading */
+img {
+  animation: imageFadeIn 0.4s ease-out;
+}
+
+@keyframes imageFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 3. Reserve space for images that have known dimensions
+      (prevents layout shift on images with width/height attrs) */
+img[width][height] {
+  height: auto;
+}
+
+/* 4. Subtle skeleton pulse for images inside product cards
+      while they load */
+img[src*="Image_Premium"],
+img[src*="swift_img"],
+img[src*="stores_"] {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation:
+    skeletonPulse 1.5s ease-in-out infinite,
+    imageFadeIn 0.4s ease-out;
+}
+
+@keyframes skeletonPulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

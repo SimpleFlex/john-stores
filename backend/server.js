@@ -18,13 +18,32 @@ dotenv.config();
 
 const app = express();
 
-// ── Middleware ───────────────────────────────────────────────────
-app.use(
-  cors({
-    origin: [process.env.FRONTEND_URL, process.env.ADMIN_URL],
-    credentials: true,
-  }),
-);
+// ── CORS ──────────────────────────────────────────────────────────
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+  process.env.ADMIN_URL,
+].filter(Boolean);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (Postman, curl, mobile)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// ── Middleware ────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -35,7 +54,7 @@ app.use(
   }),
 );
 
-// ── Routes ───────────────────────────────────────────────────────
+// ── Routes ────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/products", productRoutes);
@@ -44,7 +63,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/easymedia", easymediaRoutes);
 
-// ── Health check ─────────────────────────────────────────────────
+// ── Health check ──────────────────────────────────────────────────
 app.get("/", (req, res) =>
   res.json({ message: "✅ JE Admin API is running..." }),
 );
@@ -59,7 +78,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── Start Server ──────────────────────────────────────────────────
+// ── Connect DB + Start Server ─────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {

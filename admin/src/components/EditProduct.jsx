@@ -1,41 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
-// 🔁 Replace with your real API call
-const fetchProductById = async (id) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  const mockProducts = {
-    1: {
-      productName: "Premium Rose Bouquet",
-      brand: "Swift Logistics",
-      category: "Flowers",
-      description: "Beautiful premium roses.",
-      images: [],
-      price: 4999,
-      stockQuantity: 35,
-      sizeOptions: [],
-      isFeatured: false,
-    },
-    2: {
-      productName: "Running Shoes Elite",
-      brand: "John's Stores",
-      category: "Shoes",
-      description: "Top tier running shoes.",
-      images: [],
-      price: 4999,
-      stockQuantity: 0,
-      sizeOptions: ["M", "L", "XL"],
-      isFeatured: false,
-    },
-  };
-  return mockProducts[id] || null;
-};
-
-// 🔁 Replace with your real API call
-const updateProductById = async (id, data) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return { success: true };
-};
+import {
+  fetchProductById,
+  updateProduct,
+  fetchCategories,
+} from "../services/api.service.js";
 
 const EditProduct = () => {
   const { id } = useParams();
@@ -47,24 +16,48 @@ const EditProduct = () => {
     brand: "",
     category: "",
     description: "",
-    images: [], // array of { type: "url"|"file", value: string, name?: string }
+    images: [],
     price: "",
     stockQuantity: "",
     sizeOptions: [],
     isFeatured: false,
   });
 
+  const [categories, setCategories] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [brandOpen, setBrandOpen] = useState(false);
+
+  const brands = ["John's Stores", "Swift Logistics"];
 
   useEffect(() => {
     const load = async () => {
       try {
-        const product = await fetchProductById(id);
+        const [product, cats] = await Promise.all([
+          fetchProductById(id),
+          fetchCategories(),
+        ]);
+        setCategories(cats);
         if (product) {
-          setFormData((prev) => ({ ...prev, ...product }));
+          setFormData({
+            productName: product.productName || "",
+            brand: product.brand || "",
+            category: product.category?._id || product.category || "",
+            description: product.description || "",
+            images:
+              product.images?.map((img) => ({
+                type: "url",
+                value: img.url,
+                public_id: img.public_id || "",
+              })) || [],
+            price: product.price || "",
+            stockQuantity: product.stockQuantity || "",
+            sizeOptions: product.sizeOptions || [],
+            isFeatured: product.isFeatured || false,
+          });
         }
       } catch (err) {
         console.error("Failed to load product:", err);
@@ -79,7 +72,7 @@ const EditProduct = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // ── Image handlers ──────────────────────────────────────────
+  // ── Image handlers ───────────────────────────────────────────────
   const handleAddImageUrl = () => {
     const trimmed = imageUrlInput.trim();
     if (!trimmed) return;
@@ -99,13 +92,17 @@ const EditProduct = () => {
           ...prev,
           images: [
             ...prev.images,
-            { type: "file", value: ev.target.result, name: file.name },
+            {
+              type: "file",
+              value: ev.target.result,
+              name: file.name,
+              fileObj: file,
+            },
           ],
         }));
       };
       reader.readAsDataURL(file);
     });
-    // reset input so same file can be re-selected
     e.target.value = "";
   };
 
@@ -116,11 +113,10 @@ const EditProduct = () => {
     }));
   };
 
-  // ── Size handlers ────────────────────────────────────────────
+  // ── Size handlers ────────────────────────────────────────────────
   const handleAddSize = () => {
     const trimmed = sizeInput.trim();
-    if (!trimmed) return;
-    if (formData.sizeOptions.includes(trimmed)) return; // no duplicates
+    if (!trimmed || formData.sizeOptions.includes(trimmed)) return;
     setFormData((prev) => ({
       ...prev,
       sizeOptions: [...prev.sizeOptions, trimmed],
@@ -135,27 +131,34 @@ const EditProduct = () => {
     }));
   };
 
-  const handleSizeKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddSize();
-    }
-  };
-
-  // ── Submit ───────────────────────────────────────────────────
+  // ── Submit ───────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await updateProductById(id, formData);
-      // ✅ FIX: Pass updated product data via navigation state
-      // so Products.jsx can update its list without re-fetching
+      // Build payload — send as JSON (no file upload for now)
+      const payload = {
+        productName: formData.productName,
+        brand: formData.brand,
+        category: formData.category,
+        description: formData.description,
+        price: formData.price,
+        stockQuantity: formData.stockQuantity,
+        sizeOptions: JSON.stringify(formData.sizeOptions),
+        isFeatured: String(formData.isFeatured),
+        // URL images only
+        imageUrls: JSON.stringify(
+          formData.images
+            .filter((img) => img.type === "url")
+            .map((img) => img.value),
+        ),
+      };
+
+      await updateProduct(id, payload);
+
       navigate("/products", {
         state: {
-          updatedProduct: {
-            id,
-            ...formData,
-          },
+          updatedProduct: { id, ...formData },
         },
       });
     } catch (err) {
@@ -165,25 +168,24 @@ const EditProduct = () => {
     }
   };
 
+  const getCategoryName = () => {
+    const cat = categories.find((c) => c._id === formData.category);
+    return cat?.name || "Select Category";
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <p className="text-[#717182] font-dm-sans-500">Loading product...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#032817] border-t-transparent animate-spin" />
+          <p className="text-[#717182] font-dm-sans-500">Loading product...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full flex flex-col">
-      <div className="flex w-full items-center h-17 pt-5.75 pb-6.25 pl-1.25 pr-14.25 rounded-[25px] bg-[#FCFCFC]">
-        <div className="flex items-center justify-between w-full">
-          <p className="text-[#2D2D2D] font-medium text-[18px] leading-4.5 tracking-[-0.2px] font-clash-grotesk">
-            Products Management
-          </p>
-          <img src="/noti.svg" alt="" />
-        </div>
-      </div>
-
       <div className="flex flex-col justify-center items-start w-full p-3 rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
         <div className="flex items-center py-5 gap-2">
           <button
@@ -218,37 +220,80 @@ const EditProduct = () => {
                 onChange={(e) => handleChange("productName", e.target.value)}
                 placeholder="Enter product name"
                 disabled={isLoading}
-                className="flex items-center w-full h-15 pt-5.25 pb-5.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] placeholder:font-normal placeholder:text-base placeholder:leading-4.5 font-dm-sans disabled:opacity-50"
+                className="flex items-center w-full h-15 pt-5.25 pb-5.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] font-dm-sans disabled:opacity-50"
               />
             </div>
 
-            {/* Brand */}
-            <div className="flex flex-col w-full items-start gap-1.5">
+            {/* Brand Dropdown */}
+            <div className="flex flex-col w-full items-start gap-1.5 relative">
               <p className="text-[#2D2D2D] font-medium text-base leading-4.5 font-dm-sans-500">
                 Brand
               </p>
-              <div className="flex justify-between w-full items-center px-5.25 py-4.75 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white cursor-pointer">
-                <div className="flex gap-0.5 items-center">
-                  <img src="/john-stores.svg" alt="" />
-                  <p className="text-[#2D2D2D] font-medium text-base leading-4.5 tracking-[-0.5px] font-dm-sans">
-                    {formData.brand || "John's Stores"}
-                  </p>
-                </div>
-                <img src="/keyboard-arrow.svg" alt="" />
+              <div
+                onClick={() => setBrandOpen(!brandOpen)}
+                className="flex justify-between w-full items-center px-5.25 py-4.75 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white cursor-pointer"
+              >
+                <p className="text-[#2D2D2D] font-medium text-base font-dm-sans">
+                  {formData.brand || "Select Brand"}
+                </p>
+                <img
+                  src="/keyboard-arrow.svg"
+                  alt=""
+                  className={`transition-transform ${brandOpen ? "rotate-180" : ""}`}
+                />
               </div>
+              {brandOpen && (
+                <div className="absolute top-full mt-1 w-full bg-white border border-[#D1D5DC] rounded-[14px] shadow-md z-10">
+                  {brands.map((b) => (
+                    <div
+                      key={b}
+                      onClick={() => {
+                        handleChange("brand", b);
+                        setBrandOpen(false);
+                      }}
+                      className="px-5 py-3 hover:bg-gray-50 cursor-pointer font-dm-sans text-sm text-[#2D2D2D]"
+                    >
+                      {b}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Category */}
-            <div className="flex flex-col w-full items-start gap-1.5">
+            {/* Category Dropdown */}
+            <div className="flex flex-col w-full items-start gap-1.5 relative">
               <p className="text-[#2D2D2D] font-medium text-base leading-4.5 font-dm-sans-500">
                 Category
               </p>
-              <div className="flex justify-between w-full items-center px-5.25 py-4.75 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white cursor-pointer">
-                <p className="text-[#2D2D2D] font-medium text-base leading-4.5 tracking-[-0.5px] font-dm-sans">
-                  {formData.category || "Select Category"}
+              <div
+                onClick={() => setCategoryOpen(!categoryOpen)}
+                className="flex justify-between w-full items-center px-5.25 py-4.75 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white cursor-pointer"
+              >
+                <p className="text-[#2D2D2D] font-medium text-base font-dm-sans">
+                  {getCategoryName()}
                 </p>
-                <img src="/keyboard-arrow.svg" alt="" />
+                <img
+                  src="/keyboard-arrow.svg"
+                  alt=""
+                  className={`transition-transform ${categoryOpen ? "rotate-180" : ""}`}
+                />
               </div>
+              {categoryOpen && (
+                <div className="absolute top-full mt-1 w-full bg-white border border-[#D1D5DC] rounded-[14px] shadow-md z-10 max-h-48 overflow-y-auto">
+                  {categories.map((cat) => (
+                    <div
+                      key={cat._id}
+                      onClick={() => {
+                        handleChange("category", cat._id);
+                        setCategoryOpen(false);
+                      }}
+                      className="px-5 py-3 hover:bg-gray-50 cursor-pointer font-dm-sans text-sm text-[#2D2D2D]"
+                    >
+                      {cat.name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -262,17 +307,15 @@ const EditProduct = () => {
                 placeholder="Enter product description..."
                 disabled={isLoading}
                 rows={4}
-                className="flex items-center w-full pt-5.25 pb-15.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] placeholder:font-normal placeholder:text-base placeholder:leading-[18px] font-dm-sans disabled:opacity-50"
+                className="flex items-center w-full pt-5.25 pb-15.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] font-dm-sans disabled:opacity-50"
               />
             </div>
 
-            {/* ── Product Images ── */}
+            {/* Product Images */}
             <div className="flex flex-col w-full items-start gap-3">
               <label className="text-[#2D2D2D] font-medium text-base leading-4.5 font-dm-sans-500">
                 Product Images
               </label>
-
-              {/* URL input row */}
               <div className="flex w-full gap-2 items-center">
                 <input
                   type="text"
@@ -283,9 +326,8 @@ const EditProduct = () => {
                     (e.preventDefault(), handleAddImageUrl())
                   }
                   placeholder="Enter image URL"
-                  className="flex items-center w-full h-15 pt-5.25 pb-5.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] placeholder:font-normal placeholder:text-base placeholder:leading-[18px] font-dm-sans"
+                  className="flex items-center w-full h-15 pt-5.25 pb-5.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] font-dm-sans"
                 />
-                {/* Add URL button */}
                 <button
                   type="button"
                   onClick={handleAddImageUrl}
@@ -302,7 +344,6 @@ const EditProduct = () => {
                 </button>
               </div>
 
-              {/* Local upload row */}
               <div className="flex w-full items-center gap-2">
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -327,7 +368,6 @@ const EditProduct = () => {
                     Upload from device
                   </p>
                 </div>
-                {/* hidden file input */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -352,7 +392,6 @@ const EditProduct = () => {
                 </button>
               </div>
 
-              {/* Image previews */}
               {formData.images.length > 0 && (
                 <div className="flex flex-wrap gap-2 w-full">
                   {formData.images.map((img, index) => (
@@ -362,7 +401,6 @@ const EditProduct = () => {
                         alt={img.name || `image-${index}`}
                         className="w-[80px] h-[80px] object-cover rounded-[10px] border border-[#D1D5DC]"
                       />
-                      {/* Remove button */}
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
@@ -382,7 +420,6 @@ const EditProduct = () => {
                           />
                         </svg>
                       </button>
-                      {/* Label: URL or FILE */}
                       <div className="absolute bottom-1 left-1 px-1 rounded bg-black/50">
                         <p className="text-white text-[9px] font-dm-sans">
                           {img.type === "file" ? "local" : "url"}
@@ -406,10 +443,9 @@ const EditProduct = () => {
                   onChange={(e) => handleChange("price", e.target.value)}
                   placeholder="0"
                   disabled={isLoading}
-                  className="flex items-center w-full h-[60px] pt-5.25 pb-5.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] placeholder:font-normal placeholder:text-base placeholder:leading-[18px] font-dm-sans disabled:opacity-50"
+                  className="flex items-center w-full h-[60px] pt-5.25 pb-5.25 pl-5.25 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white font-dm-sans disabled:opacity-50"
                 />
               </div>
-
               <div className="flex flex-col w-full items-start gap-1.5">
                 <label className="text-[#2D2D2D] font-medium text-base leading-[18px] font-dm-sans-500">
                   Stock Quantity
@@ -422,12 +458,12 @@ const EditProduct = () => {
                   }
                   placeholder="0"
                   disabled={isLoading}
-                  className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] placeholder:font-normal placeholder:text-base placeholder:leading-[18px] font-dm-sans disabled:opacity-50"
+                  className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white font-dm-sans disabled:opacity-50"
                 />
               </div>
             </div>
 
-            {/* ── Size Options ── */}
+            {/* Size Options */}
             <div className="flex flex-col w-full gap-2">
               <div className="flex flex-col w-full items-start gap-1.5">
                 <label className="text-[#2D2D2D] font-medium text-base leading-[18px] font-dm-sans-500">
@@ -438,11 +474,12 @@ const EditProduct = () => {
                     type="text"
                     value={sizeInput}
                     onChange={(e) => setSizeInput(e.target.value)}
-                    onKeyDown={handleSizeKeyDown}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), handleAddSize())
+                    }
                     placeholder="e.g., M, L, XL — press Enter or +"
-                    className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] placeholder:font-normal placeholder:text-base placeholder:leading-[18px] font-dm-sans"
+                    className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white font-dm-sans"
                   />
-                  {/* Add size button */}
                   <button
                     type="button"
                     onClick={handleAddSize}
@@ -459,8 +496,6 @@ const EditProduct = () => {
                   </button>
                 </div>
               </div>
-
-              {/* Size tags */}
               {formData.sizeOptions.length > 0 && (
                 <div className="flex flex-wrap w-full gap-2">
                   {formData.sizeOptions.map((size, index) => (
@@ -496,11 +531,7 @@ const EditProduct = () => {
               <button
                 type="button"
                 onClick={() => handleChange("isFeatured", !formData.isFeatured)}
-                className={`flex justify-center items-center w-[20px] h-[20px] aspect-square rounded-[4px] border border-[rgba(3,40,23,0.35)] transition-colors cursor-pointer ${
-                  formData.isFeatured
-                    ? "bg-[#032817]"
-                    : "bg-[rgba(3,40,23,0.15)]"
-                }`}
+                className={`flex justify-center items-center w-[20px] h-[20px] aspect-square rounded-[4px] border border-[rgba(3,40,23,0.35)] transition-colors cursor-pointer ${formData.isFeatured ? "bg-[#032817]" : "bg-[rgba(3,40,23,0.15)]"}`}
               >
                 {formData.isFeatured && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

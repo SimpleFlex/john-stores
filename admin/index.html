@@ -4,7 +4,106 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>John's Admin</title>
+    <title>John's Enterprise — Swift Logistics, John Stores & Easy Media</title>
+    <meta
+      name="description"
+      content="John Enterprise is a multi-service company: international delivery via Swift Logistics, premium gadgets at John Stores, and digital services via Easy Media. Serving Nigeria, Ghana, Kenya, South Africa, and worldwide."
+    />
+
+    <!-- ───────────────────────────────────────────────
+      DNS PREFETCH + PRECONNECT — Early CDN/Origin Hints
+      ─────────────────────────────────────────────── -->
+    <!-- If you use a CDN, add your CDN domain here -->
+    <!-- <link rel="dns-prefetch" href="https://your-cdn.com" /> -->
+    <!-- <link rel="preconnect" href="https://your-cdn.com" crossorigin /> -->
+
+    <!-- ───────────────────────────────────────────────
+      PRELOAD: Critical Hero Images (LCP Candidates)
+      These start downloading BEFORE any JS parses.
+      Vite resolves /src/assets/ paths during build
+      and replaces them with content‑hashed filenames.
+      ─────────────────────────────────────────────── -->
+    <!-- Slide 1 — John's Enterprise hero (default LCP) -->
+    <link
+      rel="preload"
+      as="image"
+      href="/src/assets/John-Enterprise-Hero-Section.png"
+      fetchpriority="high"
+    />
+
+    <!-- Slide 2 — Swift Logistics hero (preload for carousel) -->
+    <link
+      rel="preload"
+      as="image"
+      href="/src/assets/Swift_Logistics.png"
+      fetchpriority="low"
+    />
+
+    <!-- Slide 3 — John Stores hero (preload for carousel) -->
+    <link
+      rel="preload"
+      as="image"
+      href="/src/assets/stores_hero.png"
+      fetchpriority="low"
+    />
+
+    <!-- ───────────────────────────────────────────────
+      PRELOAD: Critical Fonts
+      You're loading Clash Grotesk & Clash Display
+      as local woff2 files via @font-face in CSS.
+      Vite will process these. Preload to avoid FOUT.
+      ─────────────────────────────────────────────── -->
+    <link
+      rel="preload"
+      as="font"
+      href="/src/assets/fonts/ClashGrotesk-Medium.woff2"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      as="font"
+      href="/src/assets/fonts/ClashGrotesk-Bold.woff2"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      as="font"
+      href="/src/assets/fonts/ClashDisplay-Medium.woff2"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+
+    <!-- ───────────────────────────────────────────────
+      PRELOAD: DM Sans from Google Fonts
+      Your index.css imports DM Sans from Google.
+      Preconnecting to Google Fonts speeds up the fetch.
+      ─────────────────────────────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- ───────────────────────────────────────────────
+      PRELOAD: Critical SVGs Used Above the Fold
+      Public folder SVGs used in Navbar / HeroCarousel.
+      These have no hashed paths so we preload by raw path.
+      Only preload SVGs visible in the initial viewport.
+      ─────────────────────────────────────────────── -->
+    <!-- Navbar cart icon (appears on every page above fold) -->
+    <link rel="preload" as="image" href="/cart.svg" fetchpriority="low" />
+
+    <!-- Carousel dot indicators (always visible) -->
+    <!-- (No preload needed — these are tiny inline elements) -->
+
+    <!-- ───────────────────────────────────────────────
+      META HINTS: Early Resource Discovery
+      Helps the browser speculatively open connections
+      for resources it will need soon.
+      ─────────────────────────────────────────────── -->
+    <meta
+      http-equiv="Link"
+      content="</src/assets/John-Enterprise-Hero-Section.png>; rel=preload; as=image; fetchpriority=high"
+    />
   </head>
   <body>
     <div id="root"></div>

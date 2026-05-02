@@ -1,45 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DeleteProduct from "../components/DeleteProduct";
-
-// Mock API service
-const productsAPI = {
-  fetchProducts: async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return [
-      {
-        id: "1",
-        image: "/api/placeholder/60/60",
-        name: "Premium Rose Bouquet",
-        brand: "Swift Logistics",
-        brandIcon: "/swift-log.svg",
-        category: "Flowers",
-        price: 4999,
-        stock: 35,
-        status: "In Stock",
-      },
-      {
-        id: "2",
-        image: "/api/placeholder/60/60",
-        name: "Running Shoes Elite",
-        brand: "John's Stores",
-        brandIcon: "/john-stores.svg",
-        category: "Shoes",
-        price: 4999,
-        stock: 0,
-        status: "Out of Stock",
-      },
-    ];
-  },
-  deleteProduct: async (id) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return { success: true };
-  },
-};
+import { fetchProducts, deleteProduct } from "../services/api.service.js";
 
 const Products = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // ✅ FIX: listen for state from EditProduct
+  const location = useLocation();
   const [showDelete, setShowDelete] = useState(false);
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -50,8 +16,7 @@ const Products = () => {
     loadProducts();
   }, []);
 
-  // ✅ FIX: When navigating back from EditProduct, merge the updated product
-  // into the existing list so the UI reflects changes immediately
+  // ── Apply updated product from EditProduct navigation state ──────
   useEffect(() => {
     if (location.state?.updatedProduct) {
       const updated = location.state.updatedProduct;
@@ -62,7 +27,7 @@ const Products = () => {
                 ...p,
                 name: updated.productName,
                 brand: updated.brand,
-                category: updated.category,
+                category: updated.category?.name || updated.category,
                 price: Number(updated.price),
                 stock: Number(updated.stockQuantity),
                 status:
@@ -73,7 +38,6 @@ const Products = () => {
             : p,
         ),
       );
-      // ✅ Clear navigation state so it doesn't re-apply on future renders
       window.history.replaceState({}, "");
     }
   }, [location.state]);
@@ -81,8 +45,20 @@ const Products = () => {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const data = await productsAPI.fetchProducts();
-      setProducts(data);
+      const data = await fetchProducts();
+      const normalized = data.products.map((p) => ({
+        id: p._id,
+        image: p.images?.[0]?.url || "/api/placeholder/60/60",
+        name: p.productName,
+        brand: p.brand,
+        brandIcon:
+          p.brand === "John's Stores" ? "/john-stores.svg" : "/swift-log.svg",
+        category: p.category?.name || p.category || "-",
+        price: p.price,
+        stock: p.stockQuantity,
+        status: p.status,
+      }));
+      setProducts(normalized);
     } catch (error) {
       console.error("Failed to load products:", error);
     } finally {
@@ -94,7 +70,7 @@ const Products = () => {
     if (!selectedProduct) return;
     setIsDeleting(true);
     try {
-      await productsAPI.deleteProduct(selectedProduct.id);
+      await deleteProduct(selectedProduct.id);
       setProducts((prev) => prev.filter((p) => p.id !== selectedProduct.id));
       setShowDelete(false);
       setSelectedProduct(null);
@@ -113,16 +89,6 @@ const Products = () => {
 
   return (
     <div className="w-full flex flex-col">
-      {/* header */}
-      <div className="flex w-full items-center h-17 pt-5.75 pb-6.25 pl-1.25 pr-14.25 rounded-[25px] bg-[#FCFCFC]">
-        <div className="flex items-center justify-between w-full">
-          <p className="text-[#2D2D2D] font-medium text-[18px] leading-4.5 tracking-[-0.2px] font-clash-grotesk">
-            Products Management
-          </p>
-          <img src="/noti.svg" alt="" />
-        </div>
-      </div>
-
       {/* body */}
       <div className="flex flex-col justify-end items-center w-full pt-[25px] pb-[14px] px-[15px] gap-5 rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
         <div className="flex w-full justify-between items-center px-1">
@@ -140,9 +106,9 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Products Table */}
+        {/* Table */}
         <div className="flex flex-col px-1 items-center justify-end bg-white w-full">
-          {/* Table Header */}
+          {/* Header */}
           <div className="flex items-start gap-[24px] w-full">
             {[
               "Product image",
@@ -181,9 +147,22 @@ const Products = () => {
             ))}
           </div>
 
-          {/* Table Rows */}
+          {/* Rows */}
           {loading ? (
-            <div className="flex justify-center py-10">Loading products...</div>
+            <div className="flex justify-center py-10 w-full">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full border-2 border-[#032817] border-t-transparent animate-spin" />
+                <p className="text-[#717182] font-dm-sans-500 text-sm">
+                  Loading products...
+                </p>
+              </div>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex justify-center py-10 w-full">
+              <p className="text-[#717182] font-dm-sans-500 text-sm">
+                No products found
+              </p>
+            </div>
           ) : (
             <div className="flex flex-col items-start gap-4 w-full">
               {products.map((product) => (
@@ -205,7 +184,7 @@ const Products = () => {
                   </div>
                   <div className="flex items-center w-[104px] h-[65px] px-[2px]">
                     <div className="flex items-center gap-1">
-                      <img src={product.brandIcon} alt="" />
+                      <img src={product.brandIcon} alt="" className="w-4 h-4" />
                       <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
                         {product.brand}
                       </p>
@@ -228,9 +207,7 @@ const Products = () => {
                   </div>
                   <div className="flex items-center w-[98px] h-[65px] px-[2px]">
                     <div
-                      className={`flex justify-center items-center px-[8px] h-[24px] shrink-0 rounded-[4px] ${getStatusStyle(
-                        product.status,
-                      )}`}
+                      className={`flex justify-center items-center px-[8px] h-[24px] shrink-0 rounded-[4px] ${getStatusStyle(product.status)}`}
                     >
                       <p className="font-medium text-xs leading-[14px] tracking-[-0.5px] font-dm-sans-500">
                         {product.status}
@@ -239,14 +216,12 @@ const Products = () => {
                   </div>
                   <div className="flex items-center w-[98px] h-[65px] px-[2px]">
                     <div className="flex items-center w-[72.021px] h-[32px] gap-[8px] shrink-0">
-                      {/* Edit → navigates to /products/edit/:id */}
                       <button
                         onClick={() => navigate(`/products/edit/${product.id}`)}
                         className="flex flex-col items-start w-[32px] h-[32px] pt-[8px] px-[8px] rounded-[12px] shrink-0 cursor-pointer"
                       >
                         <img src="/write.svg" alt="Edit" />
                       </button>
-                      {/* Delete */}
                       <button
                         onClick={() => {
                           setSelectedProduct(product);
