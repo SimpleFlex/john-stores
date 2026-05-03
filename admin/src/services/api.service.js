@@ -24,12 +24,16 @@ export const fetchProductById = async (id) => {
 };
 
 export const createProduct = async (formData) => {
-  const res = await api.post("/products", formData);
+  const res = await api.post("/products", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return res.data.product;
 };
 
 export const updateProduct = async (id, formData) => {
-  const res = await api.put(`/products/${id}`, formData);
+  const res = await api.put(`/products/${id}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return res.data.product;
 };
 
@@ -145,10 +149,25 @@ export const deleteEmail = async (id) => {
 // AUTH
 // ════════════════════════════════════════════════════════════
 
+export const updateProfile = async (formData) => {
+  const res = await api.put("/auth/profile", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+};
+
 export const updatePassword = async (currentPassword, newPassword) => {
   const res = await api.put("/auth/update-password", {
     currentPassword,
     newPassword,
+  });
+  return res.data;
+};
+
+export const updateEmail = async (newEmail, currentPassword) => {
+  const res = await api.put("/auth/update-email", {
+    newEmail,
+    currentPassword,
   });
   return res.data;
 };

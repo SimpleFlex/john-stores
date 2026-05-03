@@ -1,7 +1,7 @@
-import Order from "../models/order.model.js";
-import Product from "../models/product.model.js";
+import Order from "../models/Order.model.js";
+import Product from "../models/Product.model.js";
 
-// ── GET /api/analytics/dashboard ────────────────────────────────
+// ── GET /api/dashboard ────────────────────────────────────────────
 // Returns all stat cards + recent orders for the Dashboard page
 export const getDashboardStats = async (req, res, next) => {
   try {
@@ -10,26 +10,27 @@ export const getDashboardStats = async (req, res, next) => {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // ── Run all queries in parallel for speed ───────────────────
+    // ── Run all queries in parallel ──────────────────────────────
     const [
       totalOrders,
       completedOrders,
       pendingPaymentOrders,
-      thisMonthRevenue,
-      lastMonthRevenue,
-      lowStockProducts,
+      thisMonthRevenueData,
+      lastMonthRevenueData,
+      allTimeRevenueData,
+      lowStockCount,
       recentOrders,
     ] = await Promise.all([
-      // Total orders count
+      // Total orders
       Order.countDocuments(),
 
-      // Completed orders count
+      // Completed orders
       Order.countDocuments({ orderStatus: "Completed" }),
 
-      // Pending payment count
+      // Pending payment
       Order.countDocuments({ paymentStatus: "Pending" }),
 
-      // This month revenue (paid orders only)
+      // This month revenue
       Order.aggregate([
         {
           $match: {
@@ -40,51 +41,72 @@ export const getDashboardStats = async (req, res, next) => {
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
 
-      // Last month revenue (paid orders only)
+      // Last month revenue
       Order.aggregate([
         {
           $match: {
             paymentStatus: "Paid",
-            createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+            createdAt: {
+              $gte: startOfLastMonth,
+              $lte: endOfLastMonth,
+            },
           },
         },
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
 
-      // Low stock products (stock <= 5)
-      Product.countDocuments({ stockQuantity: { $lte: 5 } }),
+      // All time revenue
+      Order.aggregate([
+        { $match: { paymentStatus: "Paid" } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
 
-      // Recent 5 orders for the table
+      // ── Low stock: products with stockQuantity <= 5 ──────────────
+      // This runs fresh on every request so it always reflects
+      // the current stock level in the database
+      Product.countDocuments({
+        stockQuantity: { $lte: 5 },
+        // Only count active/existing products
+      }),
+
+      // Recent 5 orders
       Order.find()
         .sort({ createdAt: -1 })
         .limit(5)
         .select(
-          "orderId brand brandIcon sender total orderStatus paymentStatus createdAt",
+          "orderId brand sender total orderStatus paymentStatus createdAt",
         )
         .lean(),
     ]);
 
-    // ── Calculate revenue trend ──────────────────────────────────
-    const thisMonthTotal = thisMonthRevenue[0]?.total || 0;
-    const lastMonthTotal = lastMonthRevenue[0]?.total || 0;
+    // ── Revenue trend calculation ────────────────────────────────
+    const thisMonthTotal = thisMonthRevenueData[0]?.total || 0;
+    const lastMonthTotal = lastMonthRevenueData[0]?.total || 0;
+    const totalRevenue = allTimeRevenueData[0]?.total || 0;
 
-    let revenueTrend = "0.0";
+    let revenueTrend = "0.0%";
     let revenueIsPositive = true;
 
     if (lastMonthTotal > 0) {
       const diff = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
       revenueIsPositive = diff >= 0;
       revenueTrend = `${revenueIsPositive ? "+" : ""}${diff.toFixed(1)}%`;
+    } else if (thisMonthTotal > 0) {
+      revenueTrend = "+100%";
+      revenueIsPositive = true;
     }
 
-    // ── Total all-time revenue ───────────────────────────────────
-    const allTimeRevenue = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$total" } } },
-    ]);
-    const totalRevenue = allTimeRevenue[0]?.total || 0;
+    // ── Also get the actual low stock products list ──────────────
+    // So admin can see WHICH products are low
+    const lowStockProducts = await Product.find({
+      stockQuantity: { $lte: 5 },
+    })
+      .select("productName stockQuantity brand status")
+      .sort({ stockQuantity: 1 }) // lowest stock first
+      .limit(10)
+      .lean();
 
-    // ── Format recent orders for the frontend ────────────────────
+    // ── Format recent orders ─────────────────────────────────────
     const formattedRecentOrders = recentOrders.map((order) => ({
       id: order._id,
       orderId: order.orderId,
@@ -92,7 +114,7 @@ export const getDashboardStats = async (req, res, next) => {
       brandIcon:
         order.brand === "John's Stores" ? "/john-stores.svg" : "/swift-log.svg",
       customerName: order.sender,
-      total: `₦${order.total?.toLocaleString()}`,
+      total: `₦${order.total?.toLocaleString() || 0}`,
       status: order.orderStatus,
       statusColor:
         order.orderStatus === "Completed"
@@ -119,13 +141,13 @@ export const getDashboardStats = async (req, res, next) => {
           },
           totalOrders: {
             value: totalOrders.toString(),
-            trend: "-",
+            trend: totalOrders > 0 ? `${totalOrders} total` : "0 total",
             label: "total orders",
           },
           pendingPayments: {
             value: pendingPaymentOrders.toString(),
-            badge: "Pending",
-            isPositive: false,
+            badge: pendingPaymentOrders > 0 ? "Pending" : "Clear",
+            isPositive: pendingPaymentOrders === 0,
           },
           completedOrders: {
             value: completedOrders.toString(),
@@ -133,14 +155,17 @@ export const getDashboardStats = async (req, res, next) => {
             isPositive: true,
           },
           lowStockItems: {
-            value: lowStockProducts.toString(),
-            badge: lowStockProducts.toString(),
-            isPositive: false,
-            label: "Categories",
-            prefix: "From",
+            // ── This is always fresh from DB ─────────────────────
+            value: lowStockCount.toString(),
+            badge: lowStockCount.toString(),
+            isPositive: lowStockCount === 0,
+            label: lowStockCount === 0 ? "All good" : "Items low",
+            prefix: lowStockCount > 0 ? "" : "",
           },
         },
         recentOrders: formattedRecentOrders,
+        // ── Bonus: send the actual low stock product details ──────
+        lowStockProducts,
       },
     });
   } catch (err) {

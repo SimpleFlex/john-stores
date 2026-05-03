@@ -5,6 +5,8 @@ import {
   logoutAdmin,
   getMe,
   updatePassword,
+  updateEmail,
+  updateProfile,
   getAllAdmins,
   deactivateAdmin,
 } from "../controllers/Auth.controller.js";
@@ -12,14 +14,16 @@ import { protect, superAdminOnly } from "../middleware/Auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/register", registerAdmin); // POST /api/auth/register
-router.post("/login", loginAdmin); // POST /api/auth/login
-router.post("/logout", protect, logoutAdmin); // POST /api/auth/logout
-router.get("/me", protect, getMe); // GET  /api/auth/me
-router.put("/update-password", protect, updatePassword); // PUT /api/auth/update-password
+router.post("/register", registerAdmin);
+router.post("/login", loginAdmin);
+router.post("/logout", protect, logoutAdmin);
+router.get("/me", protect, getMe);
+router.put("/update-password", protect, updatePassword);
+router.put("/update-email", protect, updateEmail);
+router.put("/update-profile", protect, updateProfile);
 
 // Superadmin only
-router.get("/admins", protect, superAdminOnly, getAllAdmins); // GET  /api/auth/admins
-router.put("/admins/:id/deactivate", protect, superAdminOnly, deactivateAdmin); // PUT /api/auth/admins/:id/deactivate
+router.get("/admins", protect, superAdminOnly, getAllAdmins);
+router.put("/admins/:id/deactivate", protect, superAdminOnly, deactivateAdmin);
 
 export default router;

@@ -12,6 +12,12 @@ const categorySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // ── Brand field — which store this category belongs to ────────
+    brand: {
+      type: String,
+      enum: ["John's Stores", "Swift Logistics"],
+      default: "John's Stores",
+    },
     image: {
       url: { type: String, default: "" },
       public_id: { type: String, default: "" },

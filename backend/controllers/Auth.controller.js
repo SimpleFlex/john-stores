@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import Admin from "../models/Admin.model.js";
+import cloudinary from "../config/Cloudinary.js";
 
 // Helper: generate token and set cookie
 const sendTokenResponse = (admin, statusCode, res) => {
@@ -11,10 +12,9 @@ const sendTokenResponse = (admin, statusCode, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  // Remove password from response
   admin.password = undefined;
 
   res.status(statusCode).json({
@@ -24,7 +24,7 @@ const sendTokenResponse = (admin, statusCode, res) => {
   });
 };
 
-// ── Register Admin (superadmin only in production) ───────────────
+// ── Register Admin ───────────────────────────────────────────────
 export const registerAdmin = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
@@ -68,7 +68,6 @@ export const loginAdmin = async (req, res, next) => {
         .json({ success: false, message: "Invalid credentials." });
     }
 
-    // Update last login
     admin.lastLogin = new Date();
     await admin.save({ validateBeforeSave: false });
 
@@ -87,6 +86,110 @@ export const logoutAdmin = (req, res) => {
 // ── Get current logged-in admin ──────────────────────────────────
 export const getMe = async (req, res) => {
   res.status(200).json({ success: true, admin: req.admin });
+};
+
+// ── Update profile (avatar, whatsappNumber, currency) ────────────
+export const updateProfile = async (req, res, next) => {
+  try {
+    const admin = await Admin.findById(req.admin._id);
+
+    if (!admin) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found." });
+    }
+
+    const { whatsappNumber, currency } = req.body;
+
+    if (whatsappNumber !== undefined) admin.whatsappNumber = whatsappNumber;
+    if (currency !== undefined) admin.currency = currency;
+
+    if (req.files?.avatar) {
+      if (admin.avatar && admin.avatar.includes("cloudinary")) {
+        try {
+          const publicId = admin.avatar.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(`je-admin/avatars/${publicId}`);
+        } catch (e) {
+          // ignore cleanup errors
+        }
+      }
+      const result = await cloudinary.uploader.upload(
+        req.files.avatar.tempFilePath,
+        { folder: "je-admin/avatars" },
+      );
+      admin.avatar = result.secure_url;
+    }
+
+    await admin.save({ validateBeforeSave: false });
+
+    res.status(200).json({ success: true, admin });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Update email ─────────────────────────────────────────────────
+// Requires current password to confirm identity before changing email
+export const updateEmail = async (req, res, next) => {
+  try {
+    const { newEmail, currentPassword } = req.body;
+
+    // Validate inputs
+    if (!newEmail || !currentPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New email and current password are required.",
+      });
+    }
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address.",
+      });
+    }
+
+    // Check not the same as current email
+    if (newEmail.toLowerCase().trim() === req.admin.email) {
+      return res.status(400).json({
+        success: false,
+        message: "This is already your current email.",
+      });
+    }
+
+    // Check if email is already taken by another admin
+    const existing = await Admin.findOne({
+      email: newEmail.toLowerCase().trim(),
+      _id: { $ne: req.admin._id },
+    });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already in use by another account.",
+      });
+    }
+
+    // Verify current password before making the change
+    const admin = await Admin.findById(req.admin._id).select("+password");
+    const isMatch = await admin.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect.",
+      });
+    }
+
+    // All checks passed — update email
+    admin.email = newEmail.toLowerCase().trim();
+    await admin.save({ validateBeforeSave: false });
+
+    // Issue a fresh token since email changed
+    sendTokenResponse(admin, 200, res);
+  } catch (err) {
+    next(err);
+  }
 };
 
 // ── Update password ──────────────────────────────────────────────
