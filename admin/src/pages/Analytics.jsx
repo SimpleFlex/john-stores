@@ -15,9 +15,9 @@ import { getAnalyticsSummary } from "../services/api.service.js";
 const COLORS = ["#22C55E", "#3B82F6", "#F59E0B", "#EF4444"];
 const RANGES = ["7days", "30days", "6months"];
 const RANGE_LABELS = {
-  "7days": "Last 7 Days",
-  "30days": "Last 30 Days",
-  "6months": "Last 6 Months",
+  "7days": "7 Days",
+  "30days": "30 Days",
+  "6months": "6 Months",
 };
 
 const Analytics = () => {
@@ -56,23 +56,23 @@ const Analytics = () => {
 
   return (
     <div className="w-full flex flex-col gap-5">
-      <div className="flex flex-col justify-center items-start w-full p-[12px] gap-[15px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
-        {/* ── Stat Cards ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[15px] w-full">
+      <div className="flex flex-col justify-center items-start w-full p-3 lg:p-[12px] gap-[15px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-[15px] w-full">
           {(data?.statsCards || []).map((card, index) => (
             <div
               key={index}
-              className="flex justify-center items-center w-full p-[12px] rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-[#FAFAFA]"
+              className="flex justify-center items-center w-full p-3 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-[#FAFAFA]"
             >
               <div className="flex w-full flex-col items-start shrink-0 gap-[15px]">
                 <div className="flex items-center gap-[10px]">
                   <img src={card.icon} alt="" />
-                  <p className="text-[#717182] text-center font-medium text-xs leading-[16px] font-clash-grotesk">
+                  <p className="text-[#717182] text-center font-medium text-[10px] lg:text-xs leading-[16px] font-clash-grotesk">
                     {card.label}
                   </p>
                 </div>
                 <div className="flex items-center self-stretch pl-[12px] py-[15px] rounded-[10px] border border-[rgba(107,107,107,0.10)] bg-white shadow-[0_0_5px_0_rgba(0,0,0,0.05)]">
-                  <p className="text-[#3B0002] font-medium text-[22px] leading-[28px] font-clash-grotesk">
+                  <p className="text-[#3B0002] font-medium text-[16px] lg:text-[22px] leading-[28px] font-clash-grotesk">
                     {card.value}
                   </p>
                 </div>
@@ -81,26 +81,21 @@ const Analytics = () => {
           ))}
         </div>
 
-        {/* ── Charts ─────────────────────────────────────────────── */}
-        <div className="flex justify-center items-center p-[15px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white w-full">
+        {/* Charts */}
+        <div className="flex justify-center items-center p-3 lg:p-[15px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white w-full">
           <div className="flex flex-col lg:flex-row items-start gap-4 w-full">
             {/* Revenue Bar Chart */}
-            <div className="w-full lg:w-[561px] h-[494px] px-4 pt-5 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
-              <div className="flex w-full justify-between items-center mb-4">
-                <p className="text-[#2D2D2D] font-medium text-base leading-[18px] tracking-[-0.2px] font-clash-grotesk">
+            <div className="w-full lg:w-[561px] h-[400px] lg:h-[494px] px-3 lg:px-4 pt-5 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
+              <div className="flex w-full justify-between items-center mb-4 flex-wrap gap-2">
+                <p className="text-[#2D2D2D] font-medium text-sm lg:text-base leading-[18px] tracking-[-0.2px] font-clash-grotesk">
                   Orders & Revenue
                 </p>
-                {/* Range selector */}
                 <div className="flex gap-1">
                   {RANGES.map((r) => (
                     <button
                       key={r}
                       onClick={() => setRange(r)}
-                      className={`px-3 py-1 rounded-[8px] text-xs font-dm-sans-500 cursor-pointer transition-colors ${
-                        range === r
-                          ? "bg-[#032817] text-white"
-                          : "bg-[#F3F4F6] text-[#717182]"
-                      }`}
+                      className={`px-2 lg:px-3 py-1 rounded-[8px] text-[10px] lg:text-xs font-dm-sans-500 cursor-pointer transition-colors ${range === r ? "bg-[#032817] text-white" : "bg-[#F3F4F6] text-[#717182]"}`}
                     >
                       {RANGE_LABELS[r]}
                     </button>
@@ -109,8 +104,17 @@ const Analytics = () => {
               </div>
               <ResponsiveContainer width="100%" height="85%">
                 <BarChart data={data?.revenueData || []}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
+                  />
                   <Tooltip />
                   <Bar dataKey="revenue" radius={[10, 10, 0, 0]}>
                     {(data?.revenueData || []).map((entry, index) => (
@@ -125,24 +129,24 @@ const Analytics = () => {
             </div>
 
             {/* Category Pie Chart */}
-            <div className="w-full lg:w-[361px] h-[494px] px-4 pt-5 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
-              <p className="text-[#2D2D2D] font-medium text-base leading-[18px] tracking-[-0.2px] font-clash-grotesk mb-4">
+            <div className="w-full lg:w-[361px] h-[400px] lg:h-[494px] px-3 lg:px-4 pt-5 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
+              <p className="text-[#2D2D2D] font-medium text-sm lg:text-base leading-[18px] tracking-[-0.2px] font-clash-grotesk mb-4">
                 Category Distribution
               </p>
               {(data?.categoryData || []).length === 0 ? (
                 <div className="flex justify-center items-center h-[300px]">
                   <p className="text-[#717182] text-sm font-dm-sans-500">
-                    No category data yet
+                    No data yet
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-6">
-                  <ResponsiveContainer width="100%" height={270}>
+                <div className="flex flex-col items-center gap-4">
+                  <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
                       <Pie
                         data={data?.categoryData || []}
                         dataKey="value"
-                        outerRadius={100}
+                        outerRadius={80}
                         label={({ name, percent }) =>
                           `${name} (${(percent * 100).toFixed(0)}%)`
                         }
@@ -167,11 +171,11 @@ const Analytics = () => {
                               backgroundColor: COLORS[index % COLORS.length],
                             }}
                           />
-                          <p className="text-[#0A0A0A] font-medium text-xs leading-[20px] font-clash-grotesk">
+                          <p className="text-[#0A0A0A] font-medium text-[10px] lg:text-xs leading-[20px] font-clash-grotesk">
                             {item.name}
                           </p>
                         </div>
-                        <p className="text-[#0A0A0A] font-medium text-xs leading-[20px] font-dm-sans">
+                        <p className="text-[#0A0A0A] font-medium text-[10px] lg:text-xs leading-[20px] font-dm-sans">
                           {item.orders} Orders
                         </p>
                       </div>
@@ -184,15 +188,15 @@ const Analytics = () => {
         </div>
       </div>
 
-      {/* Brand Performance Chart */}
-      <div className="flex justify-center items-center w-full p-[15px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
-        <div className="flex justify-center items-center w-full p-[25px] shrink-0 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
+      {/* Brand Performance */}
+      <div className="flex justify-center items-center w-full p-3 lg:p-[15px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
+        <div className="flex justify-center items-center w-full p-4 lg:p-[25px] shrink-0 rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
           <div className="flex flex-col w-full items-start gap-6">
             <div className="flex w-full justify-between items-center">
-              <p className="text-[#2D2D2D] font-medium text-base leading-[18px] tracking-[-0.2px] font-clash-grotesk">
+              <p className="text-[#2D2D2D] font-medium text-sm lg:text-base leading-[18px] tracking-[-0.2px] font-clash-grotesk">
                 Brand Performance
               </p>
-              <p className="text-[#717182] font-semibold text-sm leading-[18px] tracking-[-0.5px] font-dm-sans-700">
+              <p className="text-[#717182] font-semibold text-xs lg:text-sm leading-[18px] tracking-[-0.5px] font-dm-sans-700">
                 {RANGE_LABELS[range]}
               </p>
             </div>
@@ -203,7 +207,7 @@ const Analytics = () => {
                 </p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={data?.brandData || []}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />

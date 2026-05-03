@@ -30,6 +30,14 @@ const adminSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    whatsappNumber: {
+      type: String,
+      default: "",
+    },
+    currency: {
+      type: String,
+      default: "₦",
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -136,25 +136,33 @@ const EditProduct = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Build payload — send as JSON (no file upload for now)
-      const payload = {
-        productName: formData.productName,
-        brand: formData.brand,
-        category: formData.category,
-        description: formData.description,
-        price: formData.price,
-        stockQuantity: formData.stockQuantity,
-        sizeOptions: JSON.stringify(formData.sizeOptions),
-        isFeatured: String(formData.isFeatured),
-        // URL images only
-        imageUrls: JSON.stringify(
-          formData.images
-            .filter((img) => img.type === "url")
-            .map((img) => img.value),
-        ),
-      };
+      const fd = new FormData();
+      fd.append("productName", formData.productName);
+      fd.append("brand", formData.brand);
+      fd.append("category", formData.category);
+      fd.append("description", formData.description);
+      fd.append("price", formData.price);
+      fd.append("stockQuantity", formData.stockQuantity);
+      fd.append("sizeOptions", JSON.stringify(formData.sizeOptions));
+      fd.append("isFeatured", String(formData.isFeatured));
 
-      await updateProduct(id, payload);
+      // Append URL images
+      const urlImages = formData.images
+        .filter((img) => img.type === "url")
+        .map((img) => img.value);
+      if (urlImages.length > 0) {
+        fd.append("imageUrls", JSON.stringify(urlImages));
+      }
+
+      // Append local file uploads
+      const localFiles = formData.images.filter(
+        (img) => img.type === "file" && img.fileObj,
+      );
+      localFiles.forEach((img) => {
+        fd.append("images", img.fileObj);
+      });
+
+      await updateProduct(id, fd);
 
       navigate("/products", {
         state: {

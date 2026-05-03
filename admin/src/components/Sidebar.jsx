@@ -1,4 +1,3 @@
-// components/Sidebar.jsx - Fully clickable with active states
 import React from "react";
 
 const Sidebar = ({
@@ -53,7 +52,9 @@ const Sidebar = ({
 
   return (
     <div
-      className={`fixed left-0 top-0 h-full bg-[#FCFCFC] border-r border-[rgba(0,0,0,0.08)] transition-all duration-300 z-20 flex flex-col ${collapsed ? "w-20" : "w-65"}`}
+      className={`h-full bg-[#FCFCFC] border-r border-[rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col ${
+        collapsed ? "w-20" : "w-65"
+      }`}
     >
       {/* Brand Logo Section */}
       <div className="flex items-center justify-between px-4 pt-4 pb-4 border-b border-[rgba(0,0,0,0.06)] shrink-0">
@@ -71,7 +72,7 @@ const Sidebar = ({
         </div>
         <button
           onClick={onToggleCollapse}
-          className="p-1 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+          className="p-1 hover:bg-gray-100 rounded-md transition-colors cursor-pointer hidden lg:flex"
         >
           <img
             src="/top.svg"
@@ -97,10 +98,9 @@ const Sidebar = ({
         </div>
       </div>
 
-      {/* Navigation Menu - No scroll */}
+      {/* Navigation Menu */}
       <div className="flex-1 px-3 flex flex-col justify-between overflow-hidden">
         <div>
-          {/* Main Menu Items */}
           <div className="flex flex-col gap-1 mb-4">
             {menuItems.map((item) => (
               <button
@@ -129,7 +129,6 @@ const Sidebar = ({
             ))}
           </div>
 
-          {/* Others Section */}
           <div>
             {!collapsed && (
               <div className="text-[#6B6B6B] font-semibold text-xs uppercase tracking-wider mb-2 px-3 font-dm-sans-700">
@@ -166,16 +165,24 @@ const Sidebar = ({
           </div>
         </div>
 
-        {/* User Profile Section - pushed to bottom */}
+        {/* User Profile Section */}
         <div className="border-t border-[rgba(0,0,0,0.06)] pt-3 pb-3">
           <div
             className={`flex items-center gap-2 p-2 rounded-lg bg-[#FAFAFA] ${collapsed ? "justify-center" : ""}`}
           >
-            <img
-              src={userData.avatar}
-              alt="User"
-              className="w-10 h-10 rounded-full object-cover shrink-0"
-            />
+            {userData.avatar ? (
+              <img
+                src={userData.avatar}
+                alt="User"
+                className="w-10 h-10 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#032817] flex items-center justify-center shrink-0">
+                <p className="text-white font-clash-grotesk font-medium text-sm">
+                  {userData.name?.charAt(0)?.toUpperCase() || "A"}
+                </p>
+              </div>
+            )}
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-[#2D2D2D] font-semibold text-sm font-dm-sans-700 truncate">

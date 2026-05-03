@@ -24,7 +24,7 @@ const productSchema = new mongoose.Schema(
     images: [
       {
         url: { type: String, required: true },
-        public_id: { type: String }, // cloudinary public_id for deletion
+        public_id: { type: String, default: "" },
       },
     ],
     price: {
@@ -55,12 +55,15 @@ const productSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Auto-update status based on stockQuantity
-
+// ── Auto-update status based on stockQuantity ────────────────────
+// Uses async pre-save — no next() needed in Mongoose 9
 productSchema.pre("save", async function () {
+  // Always recalculate status from current stockQuantity
   this.status = this.stockQuantity > 0 ? "In Stock" : "Out of Stock";
 });
 
+// ── Guard against OverwriteModelError ────────────────────────────
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
+
 export default Product;

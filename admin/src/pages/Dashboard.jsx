@@ -6,20 +6,24 @@ const dateFilterOptions = ["Today", "This Week", "This Month", "Last 30 Days"];
 
 // ── Stat Card ────────────────────────────────────────────────────
 const StatCard = ({ stat }) => (
-  <div className="flex justify-center items-center w-full p-[12px] rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-[#FAFAFA]">
-    <div className="flex w-full flex-col items-start shrink-0 gap-[15px]">
-      <div className="flex items-center gap-[10px]">
-        <img src={stat.icon} alt={stat.label} />
-        <p className="text-[#717182] font-medium text-xs leading-[16px] font-clash-grotesk">
+  <div className="flex justify-center items-center w-full p-2.5 lg:p-[12px] rounded-[14px] lg:rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-[#FAFAFA]">
+    <div className="flex w-full flex-col items-start shrink-0 gap-[10px] lg:gap-[15px]">
+      <div className="flex items-center gap-[6px] lg:gap-[10px]">
+        <img
+          src={stat.icon}
+          alt={stat.label}
+          className="w-4 h-4 lg:w-auto lg:h-auto"
+        />
+        <p className="text-[#717182] font-medium text-[10px] lg:text-xs leading-[16px] font-clash-grotesk">
           {stat.label}
         </p>
       </div>
-      <div className="flex items-center self-stretch pl-[12px] py-[15px] rounded-[10px] border border-[rgba(107,107,107,0.10)] bg-white shadow-[0_0_5px_0_rgba(0,0,0,0.05)]">
-        <div className="flex flex-col gap-2">
-          <p className="text-[#3B0002] font-medium text-[22px] leading-[28px] font-clash-grotesk">
+      <div className="flex items-center self-stretch pl-[8px] lg:pl-[12px] py-[10px] lg:py-[15px] rounded-[8px] lg:rounded-[10px] border border-[rgba(107,107,107,0.10)] bg-white shadow-[0_0_5px_0_rgba(0,0,0,0.05)]">
+        <div className="flex flex-col gap-1 lg:gap-2">
+          <p className="text-[#3B0002] font-medium text-sm lg:text-[22px] leading-[28px] font-clash-grotesk">
             {stat.value}
           </p>
-          <span className="text-[#6B6B6B] font-medium text-[9px] leading-[12px] tracking-[-0.3px] font-dm-sans-500">
+          <span className="text-[#6B6B6B] font-medium text-[8px] lg:text-[9px] leading-[12px] tracking-[-0.3px] font-dm-sans-500">
             {stat.badgePrefix && `${stat.badgePrefix} `}
             <span
               className={`${stat.isPositive ? "text-[#1FB35B]" : "text-[#C3383F]"} font-medium`}
@@ -34,52 +38,76 @@ const StatCard = ({ stat }) => (
   </div>
 );
 
+// ── Column widths — single source of truth for header + rows ─────
+const COLS = [
+  { label: "Order ID", width: "w-[110px]" },
+  { label: "Brand", width: "w-[130px]" },
+  { label: "Customer's Name", width: "w-[130px]" },
+  { label: "Total", width: "w-[100px]" },
+  { label: "Status", width: "w-[110px]" },
+  { label: "Date", width: "w-[120px]" },
+  { label: "Action", width: "w-[70px]" },
+];
+
 // ── Order Row ────────────────────────────────────────────────────
 const OrderRow = ({ order, onView }) => (
-  <div className="flex items-center w-full px-[25px] border-b border-[rgba(107,107,107,0.15)] h-[52px]">
-    <div className="flex-1 min-w-0">
-      <p className="text-[#2D2D2D] font-medium text-[13px] leading-[14px] font-clash-grotesk truncate">
+  <div className="flex items-center w-full px-[16px] border-b border-[rgba(107,107,107,0.15)] h-[52px] gap-[12px]">
+    {/* Order ID */}
+    <div className={`${COLS[0].width} shrink-0`}>
+      <p className="text-[#2D2D2D] font-medium text-[12px] leading-[14px] font-clash-grotesk truncate">
         {order.orderId}
       </p>
     </div>
-    <div className="flex-1 flex gap-1 items-center min-w-0">
+
+    {/* Brand */}
+    <div className={`${COLS[1].width} shrink-0 flex gap-1 items-center`}>
       <img
         src={order.brandIcon}
         alt={order.brand}
         className="shrink-0 w-4 h-4"
       />
-      <p className="text-[#2D2D2D] font-medium text-[13px] leading-[14px] tracking-[-0.5px] font-dm-sans-500 truncate">
+      <p className="text-[#2D2D2D] font-medium text-[12px] leading-[14px] tracking-[-0.5px] font-dm-sans-500 truncate">
         {order.brand}
       </p>
     </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[#2D2D2D] font-medium text-[13px] leading-[14px] tracking-[-0.5px] font-dm-sans-500 truncate">
+
+    {/* Customer */}
+    <div className={`${COLS[2].width} shrink-0`}>
+      <p className="text-[#2D2D2D] font-medium text-[12px] leading-[14px] tracking-[-0.5px] font-dm-sans-500 truncate">
         {order.customerName}
       </p>
     </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[#3B0002] font-medium text-[13px] leading-[14px] font-clash-grotesk truncate">
+
+    {/* Total */}
+    <div className={`${COLS[3].width} shrink-0`}>
+      <p className="text-[#3B0002] font-medium text-[12px] leading-[14px] font-clash-grotesk truncate">
         {order.total}
       </p>
     </div>
-    <div className="flex-1 min-w-0">
+
+    {/* Status */}
+    <div className={`${COLS[4].width} shrink-0`}>
       <div
-        className={`inline-flex justify-center items-center px-3 h-[24px] rounded-[4px] ${order.statusColor}`}
+        className={`inline-flex justify-center items-center px-2 h-[24px] rounded-[4px] ${order.statusColor}`}
       >
-        <p className="text-[#2D2D2D] font-medium text-[12px] leading-[14px] tracking-[-0.5px] font-dm-sans-500">
+        <p className="text-[#2D2D2D] font-medium text-[11px] leading-[14px] tracking-[-0.5px] font-dm-sans-500 whitespace-nowrap">
           {order.status}
         </p>
       </div>
     </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[#3B0002] font-medium text-[13px] leading-[14px] font-clash-grotesk truncate">
+
+    {/* Date */}
+    <div className={`${COLS[5].width} shrink-0`}>
+      <p className="text-[#3B0002] font-medium text-[12px] leading-[14px] font-clash-grotesk truncate">
         {order.date}
       </p>
     </div>
-    <div className="flex-1 min-w-0">
+
+    {/* Action */}
+    <div className={`${COLS[6].width} shrink-0`}>
       <button
         onClick={() => onView?.(order)}
-        className="text-[#E3494E] font-bold text-[13px] leading-[14px] tracking-[-0.5px] underline font-dm-sans-700 cursor-pointer"
+        className="text-[#E3494E] font-bold text-[12px] leading-[14px] tracking-[-0.5px] underline font-dm-sans-700 cursor-pointer whitespace-nowrap"
       >
         View
       </button>
@@ -104,8 +132,6 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const data = await getDashboardStats();
-
-      // ── Map stats from API to StatCard format ──────────────────
       const s = data.stats;
       setStats([
         {
@@ -153,7 +179,6 @@ const Dashboard = () => {
           badgePrefix: s.lowStockItems.prefix,
         },
       ]);
-
       setRecentOrders(data.recentOrders);
     } catch (err) {
       console.error("Failed to load dashboard:", err);
@@ -171,6 +196,9 @@ const Dashboard = () => {
     setFilterOpen(false);
   };
 
+  // Total min-width = sum of all column widths + gaps + padding
+  const TABLE_MIN_W = "min-w-[780px]";
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -186,18 +214,19 @@ const Dashboard = () => {
 
   return (
     <div className="w-full flex flex-col">
-      <div className="flex flex-col justify-center items-start w-full p-[12px] gap-[20px] rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
-        {/* ── STAT CARDS ────────────────────────────────────────── */}
-        <div className="grid grid-cols-5 gap-[20px] w-full">
+      <div className="flex flex-col justify-center items-start w-full p-2.5 lg:p-[12px] gap-[15px] lg:gap-[20px] rounded-[20px] lg:rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
+        {/* ── STAT CARDS ─────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 lg:gap-[20px] w-full">
           {stats.map((stat) => (
             <StatCard key={stat.id} stat={stat} />
           ))}
         </div>
 
-        {/* ── RECENT ORDERS TABLE ───────────────────────────────── */}
-        <div className="w-full h-auto pt-[24px] rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
-          <div className="flex items-center w-full px-[25px] justify-between mb-2">
-            <p className="text-[#2D2D2D] font-medium text-[18px] leading-base tracking-[-0.2px] font-clash-grotesk">
+        {/* ── RECENT ORDERS TABLE ──────────────────────────────────  */}
+        <div className="w-full rounded-[14px] lg:rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white overflow-hidden">
+          {/* Table title + filter — always full width, no scroll */}
+          <div className="flex items-center w-full px-3 lg:px-[25px] pt-[16px] lg:pt-[24px] pb-3 justify-between">
+            <p className="text-[#2D2D2D] font-medium text-sm lg:text-[18px] leading-base tracking-[-0.2px] font-clash-grotesk">
               Recent Orders
             </p>
 
@@ -207,8 +236,12 @@ const Dashboard = () => {
                 className="flex gap-1 items-center justify-center cursor-pointer"
                 onClick={() => setFilterOpen(!filterOpen)}
               >
-                <img src="/calendar.svg" alt="" />
-                <p className="text-[#717182] font-semibold text-sm leading-[18px] tracking-[-0.5px] font-dm-sans-700">
+                <img
+                  src="/calendar.svg"
+                  alt=""
+                  className="w-3.5 h-3.5 lg:w-auto lg:h-auto"
+                />
+                <p className="text-[#717182] font-semibold text-[10px] lg:text-sm leading-[18px] tracking-[-0.5px] font-dm-sans-700">
                   {selectedFilter}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -217,12 +250,14 @@ const Dashboard = () => {
                 </div>
               </div>
               {filterOpen && (
-                <div className="absolute top-full right-1 mt-2 w-[135px] bg-white shadow-md rounded-[10px] z-10">
+                <div className="absolute top-full right-0 mt-2 w-[135px] bg-white shadow-md rounded-[10px] z-10">
                   {dateFilterOptions.map((option) => (
                     <div
                       key={option}
                       onClick={() => handleFilterSelect(option)}
-                      className={`flex items-center self-stretch pl-[16px] py-[10px] border-b border-[#DADADA] cursor-pointer hover:bg-gray-50 rounded-[10px] ${selectedFilter === option ? "bg-[#E6D3AC]" : ""}`}
+                      className={`flex items-center pl-[16px] py-[10px] border-b border-[#DADADA] cursor-pointer hover:bg-gray-50 rounded-[10px] ${
+                        selectedFilter === option ? "bg-[#E6D3AC]" : ""
+                      }`}
                     >
                       <p className="text-[#717182] font-semibold text-sm leading-[18px] tracking-[-0.5px] font-dm-sans-700">
                         {option}
@@ -234,26 +269,23 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="w-full">
-            <div className="flex items-center w-full px-[25px] py-[10px] bg-[#FAFAFA]">
-              {[
-                "Order ID",
-                "Brand",
-                "Customer's Name",
-                "Total",
-                "Status",
-                "Date",
-                "Action",
-              ].map((col) => (
-                <div key={col} className="flex-1 h-[44px] flex items-center">
-                  <p className="text-[#717182] font-bold text-[13px] leading-[14px] font-clash-grotesk">
-                    {col}
+          {/* ── Scrollable table area ─────────────────────────────── */}
+          <div className="w-full overflow-x-auto">
+            {/* Header */}
+            <div
+              className={`flex items-center ${TABLE_MIN_W} px-[16px] py-[10px] gap-[12px] bg-[#FAFAFA]`}
+            >
+              {COLS.map((col) => (
+                <div key={col.label} className={`${col.width} shrink-0`}>
+                  <p className="text-[#717182] font-bold text-[12px] leading-[14px] font-clash-grotesk">
+                    {col.label}
                   </p>
                 </div>
               ))}
             </div>
-            <div className="flex flex-col">
+
+            {/* Rows */}
+            <div className={`flex flex-col ${TABLE_MIN_W}`}>
               {recentOrders.length > 0 ? (
                 recentOrders.map((order) => (
                   <OrderRow

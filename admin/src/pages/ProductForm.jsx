@@ -66,9 +66,9 @@ const ProductForm = () => {
             ...prev.images,
             {
               type: "file",
-              value: ev.target.result,
+              value: ev.target.result, // base64 for preview
               name: file.name,
-              fileObj: file,
+              fileObj: file, // actual File object for upload
             },
           ],
         }));
@@ -138,21 +138,28 @@ const ProductForm = () => {
 
     setIsSaving(true);
     try {
-      const payload = {
-        productName: formData.productName,
-        brand: formData.brand,
-        category: formData.category,
-        description: formData.description,
-        price: formData.price,
-        stockQuantity: formData.stockQuantity,
-        sizeOptions: JSON.stringify(formData.sizeOptions),
-        isFeatured: String(formData.isFeatured),
-        imageUrls: JSON.stringify(
-          formData.images
-            .filter((img) => img.type === "url")
-            .map((img) => img.value),
-        ),
-      };
+      // ── Always use FormData so file uploads work ─────────────────
+      const payload = new FormData();
+      payload.append("productName", formData.productName);
+      payload.append("brand", formData.brand);
+      payload.append("category", formData.category);
+      payload.append("description", formData.description);
+      payload.append("price", formData.price);
+      payload.append("stockQuantity", formData.stockQuantity);
+      payload.append("sizeOptions", JSON.stringify(formData.sizeOptions));
+      payload.append("isFeatured", String(formData.isFeatured));
+
+      // Attach actual File objects for local uploads
+      const fileImages = formData.images.filter((img) => img.type === "file");
+      fileImages.forEach((img) => {
+        payload.append("images", img.fileObj);
+      });
+
+      // Send URL images as JSON string
+      const urlImages = formData.images
+        .filter((img) => img.type === "url")
+        .map((img) => img.value);
+      payload.append("imageUrls", JSON.stringify(urlImages));
 
       await createProduct(payload);
       navigate("/products");

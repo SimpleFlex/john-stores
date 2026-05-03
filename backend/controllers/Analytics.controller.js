@@ -73,7 +73,9 @@ export const getRevenueChart = async (req, res, next) => {
 export const getCategoryDistribution = async (req, res, next) => {
   try {
     const categoryData = await Order.aggregate([
+      { $match: { paymentStatus: "Paid" } },
       { $unwind: "$items" },
+      { $match: { "items.product": { $exists: true, $ne: null } } },
       {
         $lookup: {
           from: "products",
@@ -82,7 +84,7 @@ export const getCategoryDistribution = async (req, res, next) => {
           as: "productInfo",
         },
       },
-      { $unwind: { path: "$productInfo", preserveNullAndEmptyArrays: true } }, // ✅ fixed
+      { $unwind: { path: "$productInfo", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: "categories",
@@ -91,7 +93,7 @@ export const getCategoryDistribution = async (req, res, next) => {
           as: "categoryInfo",
         },
       },
-      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } }, // ✅ fixed
+      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
       {
         $group: {
           _id: { $ifNull: ["$categoryInfo.name", "Uncategorized"] },
@@ -230,7 +232,9 @@ export const getAnalyticsSummary = async (req, res, next) => {
 
       // Category distribution
       Order.aggregate([
+        { $match: { paymentStatus: "Paid" } },
         { $unwind: "$items" },
+        { $match: { "items.product": { $exists: true, $ne: null } } },
         {
           $lookup: {
             from: "products",
@@ -239,7 +243,7 @@ export const getAnalyticsSummary = async (req, res, next) => {
             as: "productInfo",
           },
         },
-        { $unwind: { path: "$productInfo", preserveNullAndEmptyArrays: true } }, // ✅ fixed
+        { $unwind: { path: "$productInfo", preserveNullAndEmptyArrays: true } },
         {
           $lookup: {
             from: "categories",
@@ -250,7 +254,7 @@ export const getAnalyticsSummary = async (req, res, next) => {
         },
         {
           $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true },
-        }, // ✅ fixed
+        },
         {
           $group: {
             _id: { $ifNull: ["$categoryInfo.name", "Uncategorized"] },
@@ -261,6 +265,7 @@ export const getAnalyticsSummary = async (req, res, next) => {
         { $sort: { orders: -1 } },
         { $project: { _id: 0, name: "$_id", orders: 1, value: 1 } },
       ]),
+
       // Stats
       Order.countDocuments({ createdAt: { $gte: startDate } }),
       Order.aggregate([
@@ -282,6 +287,19 @@ export const getAnalyticsSummary = async (req, res, next) => {
       });
     }
 
+    // Calculate derived stats
+    const totalRevenue = revenueInRange[0]?.total || 0;
+    const totalOrders = ordersInRange;
+    const completedOrders = completedInRange;
+
+    const averageOrderValue =
+      totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+
+    const conversionRate =
+      totalOrders > 0
+        ? ((completedOrders / totalOrders) * 100).toFixed(1) + "%"
+        : "0.0%";
+
     res.status(200).json({
       success: true,
       range,
@@ -291,25 +309,31 @@ export const getAnalyticsSummary = async (req, res, next) => {
             id: "revenue",
             label: "Total Revenue",
             icon: "/naira.svg",
-            value: `₦${(revenueInRange[0]?.total || 0).toLocaleString()}`,
+            value: `₦${totalRevenue.toLocaleString()}`,
           },
           {
             id: "orders",
             label: "Total Orders",
             icon: "/orders.svg",
-            value: ordersInRange.toString(),
+            value: totalOrders.toString(),
+          },
+          {
+            id: "averageOrderValue",
+            label: "Average Order Value",
+            icon: "/naira.svg",
+            value: `₦${averageOrderValue.toLocaleString()}`,
+          },
+          {
+            id: "conversionRate",
+            label: "Conversion Rate",
+            icon: "/analytics.svg",
+            value: conversionRate,
           },
           {
             id: "completed",
             label: "Completed Orders",
             icon: "/completed.svg",
-            value: completedInRange.toString(),
-          },
-          {
-            id: "lowstock",
-            label: "Low Stock Items",
-            icon: "/completed.svg",
-            value: lowStock.toString(),
+            value: completedOrders.toString(),
           },
         ],
         revenueData,
