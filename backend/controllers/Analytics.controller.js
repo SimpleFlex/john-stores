@@ -1,6 +1,6 @@
 import Order from "../models/Order.model.js";
 import Product from "../models/Product.model.js";
-import Category from "../models/category.model.js";
+// import Category from "../models/Category.model.js";
 
 // ── GET /api/analytics/revenue ───────────────────────────────────
 // Bar chart data — Orders & Revenue by day/week/month

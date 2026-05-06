@@ -1,4 +1,4 @@
-import Category from "../models/category.model.js";
+import Category from "../models/Category.model.js";
 import cloudinary from "../config/Cloudinary.js";
 
 // ── GET all categories ───────────────────────────────────────────
