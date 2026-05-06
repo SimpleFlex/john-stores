@@ -88,7 +88,7 @@ export const getMe = async (req, res) => {
   res.status(200).json({ success: true, admin: req.admin });
 };
 
-// ── Update profile (avatar, whatsappNumber, currency) ────────────
+// ── Update profile (name, avatar, whatsappNumber, currency) ──────
 export const updateProfile = async (req, res, next) => {
   try {
     const admin = await Admin.findById(req.admin._id);
@@ -99,20 +99,27 @@ export const updateProfile = async (req, res, next) => {
         .json({ success: false, message: "Admin not found." });
     }
 
-    const { whatsappNumber, currency } = req.body;
+    const { name, whatsappNumber, currency } = req.body;
 
+    if (name !== undefined) admin.name = name;
     if (whatsappNumber !== undefined) admin.whatsappNumber = whatsappNumber;
     if (currency !== undefined) admin.currency = currency;
 
     if (req.files?.avatar) {
+      // Delete old avatar from Cloudinary
       if (admin.avatar && admin.avatar.includes("cloudinary")) {
         try {
-          const publicId = admin.avatar.split("/").pop().split(".")[0];
-          await cloudinary.uploader.destroy(`je-admin/avatars/${publicId}`);
+          const urlParts = admin.avatar.split("/");
+          const fileName = urlParts[urlParts.length - 1].split(".")[0];
+          const folderIndex = urlParts.indexOf("upload") + 1;
+          const folderPath = urlParts.slice(folderIndex, -1).join("/");
+          const publicId = `${folderPath}/${fileName}`;
+          await cloudinary.uploader.destroy(publicId);
         } catch (e) {
-          // ignore cleanup errors
+          console.log("Failed to delete old avatar:", e.message);
         }
       }
+
       const result = await cloudinary.uploader.upload(
         req.files.avatar.tempFilePath,
         { folder: "je-admin/avatars" },
@@ -129,12 +136,10 @@ export const updateProfile = async (req, res, next) => {
 };
 
 // ── Update email ─────────────────────────────────────────────────
-// Requires current password to confirm identity before changing email
 export const updateEmail = async (req, res, next) => {
   try {
     const { newEmail, currentPassword } = req.body;
 
-    // Validate inputs
     if (!newEmail || !currentPassword) {
       return res.status(400).json({
         success: false,
@@ -142,7 +147,6 @@ export const updateEmail = async (req, res, next) => {
       });
     }
 
-    // Basic email format check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail.trim())) {
       return res.status(400).json({
@@ -151,7 +155,6 @@ export const updateEmail = async (req, res, next) => {
       });
     }
 
-    // Check not the same as current email
     if (newEmail.toLowerCase().trim() === req.admin.email) {
       return res.status(400).json({
         success: false,
@@ -159,7 +162,6 @@ export const updateEmail = async (req, res, next) => {
       });
     }
 
-    // Check if email is already taken by another admin
     const existing = await Admin.findOne({
       email: newEmail.toLowerCase().trim(),
       _id: { $ne: req.admin._id },
@@ -171,7 +173,6 @@ export const updateEmail = async (req, res, next) => {
       });
     }
 
-    // Verify current password before making the change
     const admin = await Admin.findById(req.admin._id).select("+password");
     const isMatch = await admin.comparePassword(currentPassword);
     if (!isMatch) {
@@ -181,11 +182,9 @@ export const updateEmail = async (req, res, next) => {
       });
     }
 
-    // All checks passed — update email
     admin.email = newEmail.toLowerCase().trim();
     await admin.save({ validateBeforeSave: false });
 
-    // Issue a fresh token since email changed
     sendTokenResponse(admin, 200, res);
   } catch (err) {
     next(err);

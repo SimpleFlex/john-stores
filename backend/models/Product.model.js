@@ -42,6 +42,15 @@ const productSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    color: {
+      type: [String],
+      default: [],
+    },
+    colorImages: {
+      type: Map,
+      of: String,
+      default: {},
+    },
     isFeatured: {
       type: Boolean,
       default: false,
@@ -55,14 +64,10 @@ const productSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// ── Auto-update status based on stockQuantity ────────────────────
-// Uses async pre-save — no next() needed in Mongoose 9
 productSchema.pre("save", async function () {
-  // Always recalculate status from current stockQuantity
   this.status = this.stockQuantity > 0 ? "In Stock" : "Out of Stock";
 });
 
-// ── Guard against OverwriteModelError ────────────────────────────
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 

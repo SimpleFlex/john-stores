@@ -5,6 +5,7 @@ import { createProduct, fetchCategories } from "../services/api.service.js";
 const ProductForm = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const colorFileInputRef = useRef({});
 
   const [formData, setFormData] = useState({
     productName: "",
@@ -15,16 +16,23 @@ const ProductForm = () => {
     price: "",
     stockQuantity: "",
     sizeOptions: [],
+    color: [],
+    colorImages: {},
     isFeatured: false,
   });
 
   const [categories, setCategories] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
+  const [colorInput, setColorInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [brandOpen, setBrandOpen] = useState(false);
   const [error, setError] = useState("");
+
+  // Color image upload state — track previews per color
+  const [colorImagePreviews, setColorImagePreviews] = useState({});
+  const [colorImageFiles, setColorImageFiles] = useState({});
 
   const brands = ["John's Stores", "Swift Logistics"];
 
@@ -40,8 +48,20 @@ const ProductForm = () => {
     loadCategories();
   }, []);
 
+  // Filter categories by selected brand
+  const filteredCategories = categories.filter(
+    (cat) => !formData.brand || cat.brand === formData.brand,
+  );
+
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+      // Reset category when brand changes
+      if (field === "brand") {
+        updated.category = "";
+      }
+      return updated;
+    });
   };
 
   // ── Image handlers ───────────────────────────────────────────────
@@ -66,9 +86,9 @@ const ProductForm = () => {
             ...prev.images,
             {
               type: "file",
-              value: ev.target.result, // base64 for preview
+              value: ev.target.result,
               name: file.name,
-              fileObj: file, // actual File object for upload
+              fileObj: file,
             },
           ],
         }));
@@ -103,8 +123,50 @@ const ProductForm = () => {
     }));
   };
 
+  // ── Color handlers ───────────────────────────────────────────────
+  const handleAddColor = () => {
+    const trimmed = colorInput.trim();
+    if (!trimmed || formData.color.includes(trimmed)) return;
+    setFormData((prev) => ({
+      ...prev,
+      color: [...prev.color, trimmed],
+    }));
+    setColorInput("");
+  };
+
+  const handleRemoveColor = (index) => {
+    const removedColor = formData.color[index];
+    setFormData((prev) => ({
+      ...prev,
+      color: prev.color.filter((_, i) => i !== index),
+      colorImages: { ...prev.colorImages, [removedColor]: undefined },
+    }));
+    setColorImagePreviews((prev) => {
+      const next = { ...prev };
+      delete next[removedColor];
+      return next;
+    });
+    setColorImageFiles((prev) => {
+      const next = { ...prev };
+      delete next[removedColor];
+      return next;
+    });
+  };
+
+  const handleColorImageUpload = (color, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setColorImageFiles((prev) => ({ ...prev, [color]: file }));
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setColorImagePreviews((prev) => ({ ...prev, [color]: ev.target.result }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const getCategoryName = () => {
-    const cat = categories.find((c) => c._id === formData.category);
+    const cat = filteredCategories.find((c) => c._id === formData.category);
     return cat?.name || "Select Category";
   };
 
@@ -138,7 +200,6 @@ const ProductForm = () => {
 
     setIsSaving(true);
     try {
-      // ── Always use FormData so file uploads work ─────────────────
       const payload = new FormData();
       payload.append("productName", formData.productName);
       payload.append("brand", formData.brand);
@@ -147,15 +208,25 @@ const ProductForm = () => {
       payload.append("price", formData.price);
       payload.append("stockQuantity", formData.stockQuantity);
       payload.append("sizeOptions", JSON.stringify(formData.sizeOptions));
+      payload.append("color", JSON.stringify(formData.color));
       payload.append("isFeatured", String(formData.isFeatured));
 
-      // Attach actual File objects for local uploads
+      // Upload color images as regular images (they'll be in the images array)
+      // We'll handle colorImages mapping after
+      // Upload color images with their color name as field key
+      for (const color of formData.color) {
+        if (colorImageFiles[color]) {
+          payload.append(`colorImage_${color}`, colorImageFiles[color]);
+        }
+      }
+
+      // Build color image mapping using image indices
+      // We'll send color-to-index mapping
       const fileImages = formData.images.filter((img) => img.type === "file");
       fileImages.forEach((img) => {
         payload.append("images", img.fileObj);
       });
 
-      // Send URL images as JSON string
       const urlImages = formData.images
         .filter((img) => img.type === "url")
         .map((img) => img.value);
@@ -175,7 +246,6 @@ const ProductForm = () => {
 
   return (
     <div className="w-full flex flex-col">
-      {/* Body */}
       <div className="flex flex-col justify-center items-start w-full p-3 rounded-[25px] border border-[rgba(107,107,107,0.15)] bg-white">
         <div className="flex items-center py-[20px] gap-2">
           <button
@@ -196,7 +266,6 @@ const ProductForm = () => {
 
         <div className="flex justify-center items-center w-full py-[30px] px-[30px] rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white">
           <div className="flex flex-col w-full items-end shrink-0 gap-5">
-            {/* Error */}
             {error && (
               <div className="flex w-full items-center px-4 py-3 rounded-[12px] bg-[#FFF0F0] border border-[#FFD0D0]">
                 <p className="text-[#C10007] font-dm-sans text-sm">{error}</p>
@@ -264,7 +333,7 @@ const ProductForm = () => {
               )}
             </div>
 
-            {/* Category Dropdown */}
+            {/* Category Dropdown — filtered by brand */}
             <div className="flex flex-col w-full items-start gap-1.5 relative">
               <p className="text-[#2D2D2D] font-medium text-base leading-[18px] font-dm-sans-500">
                 Category <span className="text-[#C10007]">*</span>
@@ -284,12 +353,12 @@ const ProductForm = () => {
               </div>
               {categoryOpen && (
                 <div className="absolute top-full mt-1 w-full bg-white border border-[#D1D5DC] rounded-[14px] shadow-md z-10 max-h-48 overflow-y-auto">
-                  {categories.length === 0 ? (
+                  {filteredCategories.length === 0 ? (
                     <div className="px-5 py-3 text-[#717182] text-sm font-dm-sans">
-                      No categories found
+                      No categories for this brand
                     </div>
                   ) : (
-                    categories.map((cat) => (
+                    filteredCategories.map((cat) => (
                       <div
                         key={cat._id}
                         onClick={() => {
@@ -325,8 +394,6 @@ const ProductForm = () => {
               <label className="text-[#2D2D2D] font-medium text-base leading-4.5 font-dm-sans-500">
                 Product Images
               </label>
-
-              {/* URL input */}
               <div className="flex w-full gap-2 items-center">
                 <input
                   type="text"
@@ -354,8 +421,6 @@ const ProductForm = () => {
                   </svg>
                 </button>
               </div>
-
-              {/* File upload */}
               <div className="flex w-full items-center gap-2">
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -403,8 +468,6 @@ const ProductForm = () => {
                   </svg>
                 </button>
               </div>
-
-              {/* Image previews */}
               {formData.images.length > 0 && (
                 <div className="flex flex-wrap gap-2 w-full">
                   {formData.images.map((img, index) => (
@@ -488,7 +551,7 @@ const ProductForm = () => {
                     onKeyDown={(e) =>
                       e.key === "Enter" && (e.preventDefault(), handleAddSize())
                     }
-                    placeholder="e.g., M, L, XL — press Enter or +"
+                    placeholder="e.g., M, L, XL"
                     className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] font-dm-sans"
                   />
                   <button
@@ -537,15 +600,120 @@ const ProductForm = () => {
               )}
             </div>
 
+            {/* Color Options */}
+            <div className="flex flex-col w-full gap-2">
+              <div className="flex flex-col w-full items-start gap-1.5">
+                <label className="text-[#2D2D2D] font-medium text-base leading-[18px] font-dm-sans-500">
+                  Color Options (Optional)
+                </label>
+                <div className="flex w-full gap-2 items-center">
+                  <input
+                    type="text"
+                    value={colorInput}
+                    onChange={(e) => setColorInput(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" &&
+                      (e.preventDefault(), handleAddColor())
+                    }
+                    placeholder="e.g., Red, Blue, Black"
+                    className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white placeholder:text-[rgba(45,45,45,0.50)] font-dm-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddColor}
+                    className="flex justify-center items-center w-[48px] h-[48px] rounded-[12px] bg-[#032817] shrink-0 cursor-pointer"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path
+                        d="M10 4v12M4 10h12"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              {formData.color.length > 0 && (
+                <div className="flex flex-col w-full gap-3">
+                  {formData.color.map((clr, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-[12px] border border-[#D1D5DC] bg-[#FAFAFA]"
+                    >
+                      <div className="flex justify-center items-center h-[32px] px-[14px] gap-[8px] rounded-full border-[0.67px] border-[#0A0A0A] bg-white shrink-0">
+                        <p className="text-[#2D2D2D] font-normal text-xs leading-[14px] font-dm-sans">
+                          {clr}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveColor(index)}
+                          className="flex items-center justify-center w-[14px] h-[14px] rounded-full bg-[#ECECF0] cursor-pointer"
+                        >
+                          <svg
+                            width="8"
+                            height="8"
+                            viewBox="0 0 8 8"
+                            fill="none"
+                          >
+                            <path
+                              d="M1.5 1.5l5 5M6.5 1.5l-5 5"
+                              stroke="#0A0A0A"
+                              strokeWidth="1.2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 flex-1">
+                        {colorImagePreviews[clr] ? (
+                          <img
+                            src={colorImagePreviews[clr]}
+                            alt={clr}
+                            className="w-10 h-10 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="#9CA3AF"
+                            >
+                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                            </svg>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleColorImageUpload(clr, e)}
+                          className="hidden"
+                          ref={(el) => (colorFileInputRef.current[clr] = el)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            colorFileInputRef.current[clr]?.click()
+                          }
+                          className="text-[#032817] font-dm-sans-500 text-xs underline cursor-pointer"
+                        >
+                          {colorImagePreviews[clr]
+                            ? "Change"
+                            : "Add image for " + clr}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Featured */}
             <div className="flex w-full items-center gap-2">
               <div
                 onClick={() => handleChange("isFeatured", !formData.isFeatured)}
-                className={`flex justify-center items-center w-[20px] h-[20px] aspect-square rounded-[4px] border cursor-pointer transition-colors ${
-                  formData.isFeatured
-                    ? "bg-[#032817] border-[#032817]"
-                    : "border-[rgba(3,40,23,0.35)] bg-[rgba(3,40,23,0.15)]"
-                }`}
+                className={`flex justify-center items-center w-[20px] h-[20px] aspect-square rounded-[4px] border cursor-pointer transition-colors ${formData.isFeatured ? "bg-[#032817] border-[#032817]" : "border-[rgba(3,40,23,0.35)] bg-[rgba(3,40,23,0.15)]"}`}
               >
                 {formData.isFeatured && (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

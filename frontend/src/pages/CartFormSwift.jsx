@@ -1,6 +1,7 @@
 import React, { useState, useContext, useMemo } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { buildWhatsAppMessage } from "../utils/WhatsAppMessage";
+import { createOrder } from "../services/order.service.js";
 
 const CartFormSwift = () => {
   const { cartItems, swiftProducts, currency, navigate } =
@@ -74,6 +75,16 @@ const CartFormSwift = () => {
   const getPrice = (product) =>
     typeof product.price === "object" ? product.price.current : product.price;
 
+  const getImageSrc = (product) => {
+    const imgArray = product.images || product.image;
+    if (Array.isArray(imgArray)) {
+      return imgArray[0]?.url || imgArray[0];
+    }
+    return imgArray;
+  };
+
+  const getProductName = (product) => product.productName || product.name;
+
   const subtotal = cartList.reduce(
     (acc, item) => acc + getPrice(item.product) * item.quantity,
     0,
@@ -96,7 +107,7 @@ const CartFormSwift = () => {
     return newErrors;
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -106,6 +117,7 @@ const CartFormSwift = () => {
       return;
     }
 
+    // Open WhatsApp FIRST — synchronously before any async calls
     const message = buildWhatsAppMessage({
       senderName,
       senderPhone,
@@ -125,7 +137,47 @@ const CartFormSwift = () => {
 
     const whatsappNumber = "2349039632833";
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, "_blank");
+    const waWindow = window.open(
+      `https://wa.me/${whatsappNumber}?text=${encoded}`,
+      "_blank",
+    );
+
+    if (
+      !waWindow ||
+      waWindow.closed ||
+      typeof waWindow.closed === "undefined"
+    ) {
+      window.location.href = `https://wa.me/${whatsappNumber}?text=${encoded}`;
+    }
+
+    // Save order in background
+    try {
+      await createOrder({
+        brand: "Swift Logistics",
+        sender: senderName,
+        senderPhone,
+        senderEmail,
+        recipient: {
+          name: recipientName,
+          phone: recipientPhone,
+          address: deliveryAddress,
+        },
+        items: cartList.map((item) => ({
+          product: item.product._id,
+          name: getProductName(item.product),
+          price: getPrice(item.product),
+          quantity: item.quantity,
+          size: item.variantKey !== "default" ? item.variantKey : "",
+          image: getImageSrc(item.product) || "",
+        })),
+        subtotal,
+        deliveryFee: 0,
+        total: subtotal,
+        notes: specialInstructions,
+      });
+    } catch (err) {
+      console.error("Failed to save order:", err);
+    }
   };
 
   const inputClass = (field) =>
@@ -139,7 +191,6 @@ const CartFormSwift = () => {
         <div className="flex flex-col xl:flex-row w-full max-w-300 gap-6 xl:gap-10">
           {/* LEFT SIDE */}
           <div className="flex flex-col flex-1 gap-7.5">
-            {/* SENDER DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Sender Details
@@ -201,7 +252,6 @@ const CartFormSwift = () => {
               </div>
             </div>
 
-            {/* RECIPIENT DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Recipient Details
@@ -251,13 +301,11 @@ const CartFormSwift = () => {
               </div>
             </div>
 
-            {/* DELIVERY DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Delivery Details
               </p>
 
-              {/* COUNTRY */}
               <div className="flex flex-col gap-2 relative w-full" id="country">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery Country <span className="text-[#FB2C36]">*</span>
@@ -298,7 +346,6 @@ const CartFormSwift = () => {
                 )}
               </div>
 
-              {/* CITY */}
               <div className="flex flex-col gap-2 relative w-full" id="city">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery City <span className="text-[#FB2C36]">*</span>
@@ -337,7 +384,6 @@ const CartFormSwift = () => {
                 )}
               </div>
 
-              {/* DELIVERY ADDRESS */}
               <div className="flex flex-col gap-2" id="deliveryAddress">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Full Delivery Address{" "}
@@ -360,7 +406,6 @@ const CartFormSwift = () => {
                 )}
               </div>
 
-              {/* DELIVERY DATE */}
               <div className="flex flex-col gap-2" id="deliveryDate">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Preferred Delivery Date{" "}
@@ -383,12 +428,10 @@ const CartFormSwift = () => {
               </div>
             </div>
 
-            {/* GIFT PERSONALIZATION */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Gift Personalization
               </p>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Gift Message (Optional)
@@ -401,7 +444,6 @@ const CartFormSwift = () => {
                   placeholder="Add a personal message"
                 />
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Special Instructions (Optional)
@@ -429,16 +471,12 @@ const CartFormSwift = () => {
                   <div key={index} className="flex items-start gap-3">
                     <img
                       className="w-22.5 h-16.25 rounded-lg object-cover"
-                      src={
-                        Array.isArray(item.product.image)
-                          ? item.product.image[0]
-                          : item.product.image
-                      }
+                      src={getImageSrc(item.product)}
                       alt=""
                     />
                     <div className="flex flex-col gap-1">
                       <p className="text-[#101828] font-dm-sans-700 text-base sm:text-lg font-extrabold">
-                        {item.product.name}
+                        {getProductName(item.product)}
                       </p>
                       {item.variantKey !== "default" && (
                         <p className="text-[#4A5565] text-xs">
@@ -466,7 +504,6 @@ const CartFormSwift = () => {
                   {subtotal.toLocaleString()}
                 </p>
               </div>
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] opacity-50 text-sm sm:text-base">
                   Delivery Fee
@@ -475,7 +512,6 @@ const CartFormSwift = () => {
                   To be confirmed
                 </p>
               </div>
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] text-sm sm:text-base font-medium">
                   Estimated Total
@@ -485,7 +521,6 @@ const CartFormSwift = () => {
                   {subtotal.toLocaleString()}
                 </p>
               </div>
-
               <div className="flex justify-center items-center w-full h-9.75 rounded-[10px] border border-[#DCFCE7] bg-[#F0FDF4]">
                 <p className="text-[#016630] text-[10px]">
                   Final confirmation and delivery fee will be provided on
@@ -512,14 +547,12 @@ const CartFormSwift = () => {
                 <img src="/whatsapp.svg" alt="" />
                 continue with WhatsApp
               </button>
-
               <button
                 onClick={() => navigate("/swift-logistics")}
                 className="w-full h-15 rounded-[14px] border bg-white cursor-pointer active:bg-gray-50 transition-colors"
               >
                 Continue Shopping
               </button>
-
               <p className="text-[#6A7282] text-center text-xs">
                 No payment required at this stage.
               </p>

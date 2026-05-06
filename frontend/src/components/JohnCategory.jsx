@@ -3,36 +3,35 @@ import { assets } from "../assets/assets";
 import { ShopContext } from "../context/ShopContext";
 import JohnProductItem from "./JohnProductItem";
 
-// ─── Category list ────────────────────────────────────────────────────────────
-// "All" uses empty string so filtering is simple: "" means no filter applied
 const CATEGORIES = ["All", "Smartphones", "Audio", "Laptops", "Accessories"];
 
 const JohnCategory = () => {
   const { johnStoresProducts } = useContext(ShopContext);
 
-  // Track which category pill is active; "" = All
   const [activeCategory, setActiveCategory] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
-  // ── Filtered products ──────────────────────────────────────────────────────
-  // Memoised so it only recomputes when products list or active category changes
   const filtered = useMemo(() => {
     if (!activeCategory) return johnStoresProducts;
-    return johnStoresProducts.filter(
-      (p) => p.category?.toLowerCase() === activeCategory.toLowerCase(),
-    );
+    return johnStoresProducts.filter((p) => {
+      const catName =
+        typeof p.category === "object" ? p.category?.name : p.category;
+      return catName?.toLowerCase() === activeCategory.toLowerCase();
+    });
   }, [johnStoresProducts, activeCategory]);
 
-  // ── Category pill click handler ────────────────────────────────────────────
+  const displayProducts = showAll ? filtered : filtered.slice(0, 16);
+  const hasMore = filtered.length > 16;
+
   const handleCategory = (cat) => {
-    // "All" resets the filter; everything else sets the category
     setActiveCategory(cat === "All" ? "" : cat);
+    setShowAll(false);
   };
 
   return (
     <div className="flex w-full min-h-screen flex-col justify-center items-center px-4 sm:px-6 md:px-8 py-10 sm:py-20 bg-[#FFF]">
-      {/* ── Trust badges row ──────────────────────────────────────────────── */}
+      {/* Trust badges row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-20 mb-16 w-full justify-items-center">
-        {/* Customers */}
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center">
             {[
@@ -59,7 +58,6 @@ const JohnCategory = () => {
           </div>
         </div>
 
-        {/* Secured Shipping */}
         <div className="flex items-center gap-3 sm:gap-5">
           <img
             className="shrink-0 w-9 sm:w-11 h-9 sm:h-11"
@@ -76,7 +74,6 @@ const JohnCategory = () => {
           </div>
         </div>
 
-        {/* Flexible Payment */}
         <div className="flex items-center gap-3 sm:gap-5">
           <img
             className="shrink-0 w-9 sm:w-11 h-9 sm:h-11"
@@ -93,7 +90,6 @@ const JohnCategory = () => {
           </div>
         </div>
 
-        {/* Trusted */}
         <div className="flex items-center gap-3 sm:gap-5">
           <img
             className="shrink-0 w-9 sm:w-11 h-9 sm:h-11"
@@ -111,7 +107,7 @@ const JohnCategory = () => {
         </div>
       </div>
 
-      {/* ── Section heading + category filter pills ───────────────────────── */}
+      {/* Section heading + category filter pills */}
       <div
         id="shopcategory"
         className="w-full flex flex-col items-center text-center mb-10 sm:mb-15 px-4 sm:px-0"
@@ -123,11 +119,8 @@ const JohnCategory = () => {
           Browse our extensive collection of premium products
         </p>
 
-        {/* Filter pills — active pill turns red */}
         <div className="flex flex-wrap justify-center gap-3 sm:gap-6.25">
           {CATEGORIES.map((cat) => {
-            // A pill is "active" when its category matches the current filter
-            // "All" is active when activeCategory is empty string
             const isActive =
               cat === "All" ? activeCategory === "" : activeCategory === cat;
 
@@ -137,8 +130,8 @@ const JohnCategory = () => {
                 onClick={() => handleCategory(cat)}
                 className={`inline-flex px-4 sm:px-6 cursor-pointer py-2 justify-center items-center rounded-[10px] transition-all duration-200 active:scale-95 ${
                   isActive
-                    ? "bg-[#E3494E] shadow-sm" // active → red
-                    : "bg-[#FAFAFA] hover:bg-[#F0F0F0]" // inactive → neutral
+                    ? "bg-[#E3494E] shadow-sm"
+                    : "bg-[#FAFAFA] hover:bg-[#F0F0F0]"
                 }`}
               >
                 <p
@@ -154,22 +147,21 @@ const JohnCategory = () => {
         </div>
       </div>
 
-      {/* ── Product grid ──────────────────────────────────────────────────── */}
-      {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mx-auto mb-9 sm:mb-17.5">
-          {filtered.map((item) => (
+      {/* Product grid */}
+      {displayProducts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mx-auto mb-9 sm:mb-17.5">
+          {displayProducts.map((item) => (
             <JohnProductItem
               key={item._id}
               id={item._id}
-              image={item.image}
-              name={item.name}
+              image={item.images || item.image}
+              name={item.productName || item.name}
               price={item.price}
               reviews={item.reviews}
             />
           ))}
         </div>
       ) : (
-        /* Empty state — shown when no products match the selected category */
         <div className="flex flex-col items-center gap-3 py-20 mb-9 sm:mb-17.5">
           <p className="text-[#2D2D2D] font-clash-grotesk text-lg font-medium">
             No products found
@@ -180,12 +172,17 @@ const JohnCategory = () => {
         </div>
       )}
 
-      {/* ── Load more button ──────────────────────────────────────────────── */}
-      <button className="inline-flex px-6.5 sm:px-7.75 py-4 justify-center items-center rounded-[14px] border border-[rgba(227,73,78,0.25)] bg-[#E3494E] shadow-md active:scale-95 transition-transform duration-150">
-        <p className="font-clash-grotesk text-[#FFF] text-xs font-medium leading-6 text-center">
-          Load More Products
-        </p>
-      </button>
+      {/* Load More button — only shows when 16+ products and not all shown */}
+      {hasMore && !showAll && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="inline-flex px-6.5 sm:px-7.75 py-4 justify-center items-center rounded-[14px] border border-[rgba(227,73,78,0.25)] bg-[#E3494E] shadow-md active:scale-95 transition-transform duration-150 cursor-pointer"
+        >
+          <p className="font-clash-grotesk text-[#FFF] text-xs font-medium leading-6 text-center">
+            Load More Products
+          </p>
+        </button>
+      )}
     </div>
   );
 };

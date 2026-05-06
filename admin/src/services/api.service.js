@@ -4,8 +4,8 @@ import api from "../api/axios.js";
 // DASHBOARD
 // ════════════════════════════════════════════════════════════
 
-export const getDashboardStats = async () => {
-  const res = await api.get("/dashboard");
+export const getDashboardStats = async (filter = "Last 30 Days") => {
+  const res = await api.get("/dashboard", { params: { filter } });
   return res.data.data;
 };
 
@@ -175,4 +175,23 @@ export const updateEmail = async (newEmail, currentPassword) => {
 export const fetchAllAdmins = async () => {
   const res = await api.get("/auth/admins");
   return res.data.admins;
+};
+
+// ════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ════════════════════════════════════════════════════════════
+
+export const fetchNotifications = async () => {
+  const res = await api.get("/notifications");
+  return res.data;
+};
+
+export const markNotificationRead = async (id) => {
+  const res = await api.put(`/notifications/${id}/read`);
+  return res.data;
+};
+
+export const markAllNotificationsRead = async () => {
+  const res = await api.put("/notifications/read-all");
+  return res.data;
 };

@@ -4,9 +4,9 @@ import {
   loginAdmin,
   logoutAdmin,
   getMe,
+  updateProfile,
   updatePassword,
   updateEmail,
-  updateProfile,
   getAllAdmins,
   deactivateAdmin,
 } from "../controllers/Auth.controller.js";
@@ -18,9 +18,9 @@ router.post("/register", registerAdmin);
 router.post("/login", loginAdmin);
 router.post("/logout", protect, logoutAdmin);
 router.get("/me", protect, getMe);
+router.put("/profile", protect, updateProfile);
 router.put("/update-password", protect, updatePassword);
 router.put("/update-email", protect, updateEmail);
-router.put("/update-profile", protect, updateProfile);
 
 // Superadmin only
 router.get("/admins", protect, superAdminOnly, getAllAdmins);

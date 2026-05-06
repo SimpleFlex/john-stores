@@ -1,6 +1,7 @@
 import React, { useState, useContext, useMemo } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { buildWhatsAppMessage } from "../utils/WhatsAppMessage";
+import { createOrder } from "../services/order.service.js";
 
 const CartFormJohn = () => {
   const { cartItems, johnStoresProducts, currency, navigate } =
@@ -71,6 +72,16 @@ const CartFormJohn = () => {
   const getPrice = (product) =>
     typeof product.price === "object" ? product.price.current : product.price;
 
+  const getImageSrc = (product) => {
+    const imgArray = product.images || product.image;
+    if (Array.isArray(imgArray)) {
+      return imgArray[0]?.url || imgArray[0];
+    }
+    return imgArray;
+  };
+
+  const getProductName = (product) => product.productName || product.name;
+
   const subtotal = cartList.reduce(
     (acc, item) => acc + getPrice(item.product) * item.quantity,
     0,
@@ -89,7 +100,7 @@ const CartFormJohn = () => {
     return newErrors;
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -99,6 +110,7 @@ const CartFormJohn = () => {
       return;
     }
 
+    // Open WhatsApp FIRST — synchronously before any async calls
     const message = buildWhatsAppMessage({
       senderName: name,
       senderPhone: phone,
@@ -118,7 +130,55 @@ const CartFormJohn = () => {
 
     const whatsappNumber = "2349039632833";
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, "_blank");
+    const waWindow = window.open(
+      `https://wa.me/${whatsappNumber}?text=${encoded}`,
+      "_blank",
+    );
+
+    if (
+      !waWindow ||
+      waWindow.closed ||
+      typeof waWindow.closed === "undefined"
+    ) {
+      window.location.href = `https://wa.me/${whatsappNumber}?text=${encoded}`;
+    }
+
+    // Save order in background
+    try {
+      console.log("📤 Sending John Stores order to backend...");
+      console.log("📧 Email being sent to:", email);
+      console.log("📦 Order data:", {
+        brand: "John's Stores",
+        sender: name,
+        senderEmail: email,
+        items: cartList.length,
+        subtotal,
+      });
+
+      await createOrder({
+        brand: "John's Stores",
+        sender: name,
+        senderPhone: phone,
+        senderEmail: email,
+        recipient: { name, phone, address: deliveryAddress },
+        items: cartList.map((item) => ({
+          product: item.product._id,
+          name: getProductName(item.product),
+          price: getPrice(item.product),
+          quantity: item.quantity,
+          size: item.variantKey !== "default" ? item.variantKey : "",
+          image: getImageSrc(item.product) || "",
+        })),
+        subtotal,
+        deliveryFee: 0,
+        total: subtotal,
+        notes: specialInstructions,
+      });
+
+      console.log("✅ John Stores order saved successfully");
+    } catch (err) {
+      console.error("❌ Failed to save John Stores order:", err);
+    }
   };
 
   const inputClass = (field) =>
@@ -132,7 +192,6 @@ const CartFormJohn = () => {
         <div className="flex flex-col xl:flex-row w-full max-w-300 gap-6 xl:gap-10">
           {/* LEFT SIDE */}
           <div className="flex flex-col flex-1 gap-7.5">
-            {/* YOUR DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Your Details
@@ -190,22 +249,18 @@ const CartFormJohn = () => {
               </div>
             </div>
 
-            {/* DELIVERY DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Delivery Details
               </p>
 
-              {/* COUNTRY */}
               <div className="flex flex-col gap-2 relative w-full" id="country">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery Country <span className="text-[#FB2C36]">*</span>
                 </label>
                 <div
                   onClick={() => setCountryOpen(!countryOpen)}
-                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${
-                    errors.country ? "border-[#FB2C36]" : "border-[#D1D5DC]"
-                  } bg-white cursor-pointer`}
+                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.country ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
                 >
                   <p className={country ? "text-black" : "text-gray-400"}>
                     {country || "Select Country"}
@@ -239,16 +294,13 @@ const CartFormJohn = () => {
                 )}
               </div>
 
-              {/* CITY */}
               <div className="flex flex-col gap-2 relative w-full" id="city">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery City <span className="text-[#FB2C36]">*</span>
                 </label>
                 <div
                   onClick={() => setCityOpen(!cityOpen)}
-                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${
-                    errors.city ? "border-[#FB2C36]" : "border-[#D1D5DC]"
-                  } bg-white cursor-pointer`}
+                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.city ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
                 >
                   <p className={city ? "text-black" : "text-gray-400"}>
                     {city || "Select City"}
@@ -280,7 +332,6 @@ const CartFormJohn = () => {
                 )}
               </div>
 
-              {/* DELIVERY ADDRESS */}
               <div className="flex flex-col gap-2" id="deliveryAddress">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Full Delivery Address{" "}
@@ -303,7 +354,6 @@ const CartFormJohn = () => {
                 )}
               </div>
 
-              {/* DELIVERY DATE */}
               <div className="flex flex-col gap-2" id="deliveryDate">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Preferred Delivery Date{" "}
@@ -326,7 +376,6 @@ const CartFormJohn = () => {
               </div>
             </div>
 
-            {/* SPECIAL INSTRUCTIONS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Additional Information
@@ -358,16 +407,12 @@ const CartFormJohn = () => {
                   <div key={index} className="flex items-start gap-3">
                     <img
                       className="w-22.5 h-16.25 rounded-lg object-cover"
-                      src={
-                        Array.isArray(item.product.image)
-                          ? item.product.image[0]
-                          : item.product.image
-                      }
+                      src={getImageSrc(item.product)}
                       alt=""
                     />
                     <div className="flex flex-col gap-1">
                       <p className="text-[#101828] font-dm-sans-700 text-base sm:text-lg font-extrabold">
-                        {item.product.name}
+                        {getProductName(item.product)}
                       </p>
                       {item.variantKey !== "default" && (
                         <p className="text-[#4A5565] text-xs">
@@ -395,7 +440,6 @@ const CartFormJohn = () => {
                   {subtotal.toLocaleString()}
                 </p>
               </div>
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] opacity-50 text-sm sm:text-base">
                   Delivery Fee
@@ -404,7 +448,6 @@ const CartFormJohn = () => {
                   To be confirmed
                 </p>
               </div>
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] text-sm sm:text-base font-medium">
                   Estimated Total
@@ -414,7 +457,6 @@ const CartFormJohn = () => {
                   {subtotal.toLocaleString()}
                 </p>
               </div>
-
               <div className="flex justify-center items-center w-full h-9.75 rounded-[10px] border border-[#DCFCE7] bg-[#F0FDF4]">
                 <p className="text-[#016630] text-[10px]">
                   Final confirmation and delivery fee will be provided on
@@ -441,14 +483,12 @@ const CartFormJohn = () => {
                 <img src="/whatsapp.svg" alt="" />
                 continue with WhatsApp
               </button>
-
               <button
                 onClick={() => navigate("/john-stores")}
                 className="w-full h-15 rounded-[14px] border bg-white cursor-pointer active:bg-gray-50 transition-colors"
               >
                 Continue Shopping
               </button>
-
               <p className="text-[#6A7282] text-center text-xs">
                 No payment required at this stage.
               </p>

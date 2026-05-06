@@ -2,15 +2,35 @@ import Order from "../models/Order.model.js";
 import Product from "../models/Product.model.js";
 
 // ── GET /api/dashboard ────────────────────────────────────────────
-// Returns all stat cards + recent orders for the Dashboard page
 export const getDashboardStats = async (req, res, next) => {
   try {
+    const { filter = "Last 30 Days" } = req.query;
     const now = new Date();
-    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    let startDate;
 
-    // ── Run all queries in parallel ──────────────────────────────
+    switch (filter) {
+      case "Today":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "This Week":
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - dayOfWeek);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "This Month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "Last 30 Days":
+      default:
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30);
+        break;
+    }
+
+    const dateFilter = { createdAt: { $gte: startDate } };
+
+    // Run all queries in parallel
     const [
       totalOrders,
       completedOrders,
@@ -21,56 +41,31 @@ export const getDashboardStats = async (req, res, next) => {
       lowStockCount,
       recentOrders,
     ] = await Promise.all([
-      // Total orders
-      Order.countDocuments(),
-
-      // Completed orders
-      Order.countDocuments({ orderStatus: "Completed" }),
-
-      // Pending payment
-      Order.countDocuments({ paymentStatus: "Pending" }),
-
-      // This month revenue
+      Order.countDocuments(dateFilter),
+      Order.countDocuments({ ...dateFilter, orderStatus: "Completed" }),
+      Order.countDocuments({ ...dateFilter, paymentStatus: "Pending" }),
       Order.aggregate([
-        {
-          $match: {
-            paymentStatus: "Paid",
-            createdAt: { $gte: startOfThisMonth },
-          },
-        },
+        { $match: { paymentStatus: "Paid", ...dateFilter } },
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
-
-      // Last month revenue
       Order.aggregate([
         {
           $match: {
             paymentStatus: "Paid",
             createdAt: {
-              $gte: startOfLastMonth,
-              $lte: endOfLastMonth,
+              $gte: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+              $lte: new Date(now.getFullYear(), now.getMonth(), 0),
             },
           },
         },
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
-
-      // All time revenue
       Order.aggregate([
         { $match: { paymentStatus: "Paid" } },
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
-
-      // ── Low stock: products with stockQuantity <= 5 ──────────────
-      // This runs fresh on every request so it always reflects
-      // the current stock level in the database
-      Product.countDocuments({
-        stockQuantity: { $lte: 5 },
-        // Only count active/existing products
-      }),
-
-      // Recent 5 orders
-      Order.find()
+      Product.countDocuments({ stockQuantity: { $lte: 5 } }),
+      Order.find(dateFilter)
         .sort({ createdAt: -1 })
         .limit(5)
         .select(
@@ -79,7 +74,6 @@ export const getDashboardStats = async (req, res, next) => {
         .lean(),
     ]);
 
-    // ── Revenue trend calculation ────────────────────────────────
     const thisMonthTotal = thisMonthRevenueData[0]?.total || 0;
     const lastMonthTotal = lastMonthRevenueData[0]?.total || 0;
     const totalRevenue = allTimeRevenueData[0]?.total || 0;
@@ -96,17 +90,12 @@ export const getDashboardStats = async (req, res, next) => {
       revenueIsPositive = true;
     }
 
-    // ── Also get the actual low stock products list ──────────────
-    // So admin can see WHICH products are low
-    const lowStockProducts = await Product.find({
-      stockQuantity: { $lte: 5 },
-    })
+    const lowStockProducts = await Product.find({ stockQuantity: { $lte: 5 } })
       .select("productName stockQuantity brand status")
-      .sort({ stockQuantity: 1 }) // lowest stock first
+      .sort({ stockQuantity: 1 })
       .limit(10)
       .lean();
 
-    // ── Format recent orders ─────────────────────────────────────
     const formattedRecentOrders = recentOrders.map((order) => ({
       id: order._id,
       orderId: order.orderId,
@@ -155,16 +144,14 @@ export const getDashboardStats = async (req, res, next) => {
             isPositive: true,
           },
           lowStockItems: {
-            // ── This is always fresh from DB ─────────────────────
             value: lowStockCount.toString(),
             badge: lowStockCount.toString(),
             isPositive: lowStockCount === 0,
             label: lowStockCount === 0 ? "All good" : "Items low",
-            prefix: lowStockCount > 0 ? "" : "",
+            prefix: "",
           },
         },
         recentOrders: formattedRecentOrders,
-        // ── Bonus: send the actual low stock product details ──────
         lowStockProducts,
       },
     });

@@ -7,6 +7,9 @@ const SwiftCollections = () => {
   const { swiftProducts } = useContext(ShopContext);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState("default");
+  const [sortOpen, setSortOpen] = useState(false);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
 
   const categories = [
     { label: "Flowers & Bouquet", icon: assets.flower_icon },
@@ -20,12 +23,49 @@ const SwiftCollections = () => {
     { label: "Automobiles & Motorcycles", icon: assets.automobiles_icon },
   ];
 
+  const sortOptions = [
+    { label: "Default", value: "default" },
+    { label: "Price: Low to High", value: "price-asc" },
+    { label: "Price: High to Low", value: "price-desc" },
+    { label: "Newest First", value: "newest" },
+    { label: "Name: A-Z", value: "name-asc" },
+  ];
+
+  const isInStock = (item) =>
+    item.status !== "Out of Stock" &&
+    item.inStock !== false &&
+    item.stockQuantity !== 0;
+
   const filteredProducts =
     selectedCategory === "All"
-      ? swiftProducts.filter((item) => item.inStock)
-      : swiftProducts.filter(
-          (item) => item.category === selectedCategory && item.inStock,
+      ? swiftProducts
+      : swiftProducts.filter((item) => {
+          const catName =
+            typeof item.category === "object"
+              ? item.category?.name
+              : item.category;
+          return catName === selectedCategory;
+        });
+
+  const getPrice = (item) =>
+    typeof item.price === "object" ? item.price.current : item.price;
+
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortBy) {
+      case "price-asc":
+        return getPrice(a) - getPrice(b);
+      case "price-desc":
+        return getPrice(b) - getPrice(a);
+      case "newest":
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      case "name-asc":
+        return (a.productName || a.name || "").localeCompare(
+          b.productName || b.name || "",
         );
+      default:
+        return 0;
+    }
+  });
 
   return (
     <div
@@ -71,7 +111,6 @@ const SwiftCollections = () => {
             <span className="w-2 h-2 rounded-full bg-white" />
           )}
         </button>
-
         {selectedCategory !== "All" && (
           <button
             onClick={() => setSelectedCategory("All")}
@@ -85,18 +124,12 @@ const SwiftCollections = () => {
       {/* Mobile Filter Drawer */}
       {filterOpen && (
         <div className="fixed inset-0 z-50 flex sm:hidden">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setFilterOpen(false)}
           />
-
-          {/* Drawer */}
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[24px] p-5 max-h-[85vh] overflow-y-auto">
-            {/* Handle */}
             <div className="w-10 h-1 bg-[#E5E7EB] rounded-full mx-auto mb-5" />
-
-            {/* Drawer Header */}
             <div className="flex justify-between items-center mb-5">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg font-medium">
                 Shop by Category
@@ -119,8 +152,6 @@ const SwiftCollections = () => {
                 </svg>
               </button>
             </div>
-
-            {/* Category List */}
             <div className="flex flex-col gap-2.5 mb-6">
               {categories.map((cat, index) => (
                 <div
@@ -131,19 +162,11 @@ const SwiftCollections = () => {
                     );
                     setFilterOpen(false);
                   }}
-                  className={`flex items-center gap-3.75 px-4 py-3.5 rounded-[12px] border cursor-pointer transition-all duration-200 ${
-                    selectedCategory === cat.label
-                      ? "border-white bg-[#1a3227]"
-                      : "border-white bg-[rgba(0,226,124,0.08)]"
-                  }`}
+                  className={`flex items-center gap-3.75 px-4 py-3.5 rounded-[12px] border cursor-pointer transition-all duration-200 ${selectedCategory === cat.label ? "border-white bg-[#1a3227]" : "border-white bg-[rgba(0,226,124,0.08)]"}`}
                 >
                   <img src={cat.icon} alt="" className="w-5 h-5" />
                   <p
-                    className={`font-dm-sans-500 text-sm font-medium leading-4.5 tracking-[-0.5px] ${
-                      selectedCategory === cat.label
-                        ? "text-white"
-                        : "text-[#1A1A1A]"
-                    }`}
+                    className={`font-dm-sans-500 text-sm font-medium leading-4.5 tracking-[-0.5px] ${selectedCategory === cat.label ? "text-white" : "text-[#1A1A1A]"}`}
                   >
                     {cat.label}
                   </p>
@@ -166,15 +189,41 @@ const SwiftCollections = () => {
               ))}
             </div>
 
-            {/* Sort By */}
+            {/* Mobile Sort */}
             <p className="text-[#1A1A1A] font-dm-sans-500 text-base font-medium mb-3">
               Sort By
             </p>
-            <div className="flex h-14 justify-between px-5 py-2.5 items-center gap-2.5 rounded-[10px] border border-[rgba(3,40,23,0.35)] bg-[rgba(3,40,23,0.03)] mb-2">
-              <p className="text-[#1A1A1A] font-dm-sans-500 text-base font-medium">
-                <span className="text-[#6A7282]">Price:</span> Low to High
-              </p>
-              <img src="/arrow-black.svg" alt="" />
+            <div className="relative w-full mb-2">
+              <div
+                onClick={() => setMobileSortOpen(!mobileSortOpen)}
+                className="flex h-14 justify-between px-5 py-2.5 items-center gap-2.5 rounded-[10px] border border-[rgba(3,40,23,0.35)] bg-[rgba(3,40,23,0.03)] cursor-pointer"
+              >
+                <p className="text-[#1A1A1A] font-dm-sans-500 text-sm font-medium">
+                  <span className="text-[#6A7282]">Sort:</span>{" "}
+                  {sortOptions.find((o) => o.value === sortBy)?.label}
+                </p>
+                <img
+                  src="/arrow-black.svg"
+                  alt=""
+                  className={`transition-transform ${mobileSortOpen ? "rotate-180" : ""}`}
+                />
+              </div>
+              {mobileSortOpen && (
+                <div className="absolute top-full mt-1 w-full bg-white border border-[#D1D5DC] rounded-[10px] shadow-md z-10 overflow-hidden">
+                  {sortOptions.map((option) => (
+                    <div
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value);
+                        setMobileSortOpen(false);
+                      }}
+                      className={`px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${sortBy === option.value ? "bg-[rgba(0,226,124,0.08)] text-[#032817] font-medium" : "text-[#1A1A1A]"}`}
+                    >
+                      <p className="font-dm-sans-500 text-sm">{option.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -241,7 +290,6 @@ const SwiftCollections = () => {
               Shop by Category
             </p>
           </div>
-
           {categories.map((cat, index) => (
             <div
               key={index}
@@ -250,44 +298,57 @@ const SwiftCollections = () => {
                   selectedCategory === cat.label ? "All" : cat.label,
                 )
               }
-              className={`flex mb-2.5 w-full max-w-74.75 py-2.5 px-2.5 items-center rounded-[10px] border cursor-pointer transition-all duration-200
-                ${index === 0 ? "gap-8.25" : "gap-7.75"}
-                ${
-                  selectedCategory === cat.label
-                    ? "border-white bg-[#162c22]"
-                    : "border-white bg-[rgba(0,226,124,0.08)]"
-                }`}
+              className={`flex mb-2.5 w-full max-w-74.75 py-2.5 px-2.5 items-center rounded-[10px] border cursor-pointer transition-all duration-200 ${index === 0 ? "gap-8.25" : "gap-7.75"} ${selectedCategory === cat.label ? "border-white bg-[#162c22]" : "border-white bg-[rgba(0,226,124,0.08)]"}`}
             >
               <img src={cat.icon} alt="" />
               <p
-                className={`font-dm-sans-500 text-base font-medium leading-4.5 tracking-[-0.5px] ${
-                  selectedCategory === cat.label
-                    ? "text-white"
-                    : "text-[#1A1A1A]"
-                }`}
+                className={`font-dm-sans-500 text-base font-medium leading-4.5 tracking-[-0.5px] ${selectedCategory === cat.label ? "text-white" : "text-[#1A1A1A]"}`}
               >
                 {cat.label}
               </p>
             </div>
           ))}
 
+          {/* Desktop Sort */}
           <p className="text-[#1A1A1A] mb-5 font-dm-sans-500 text-lg font-medium leading-5 tracking-[-0.5px]">
             Sort By
           </p>
-          <div className="flex h-15 justify-between px-5 py-2.5 items-center gap-2.5 self-stretch rounded-[10px] border border-[rgba(3,40,23,0.35)] bg-[rgba(3,40,23,0.03)]">
-            <p className="text-[#1A1A1A] font-dm-sans-500 text-lg font-medium leading-5 tracking-[-0.5px]">
-              <span className="text-[#6A7282] font-dm-sans-500 text-lg font-medium leading-5 tracking-[-0.5px]">
-                Price:
-              </span>{" "}
-              Low to High
-            </p>
-            <img src="/arrow-black.svg" alt="" />
+          <div className="relative w-full">
+            <div
+              onClick={() => setSortOpen(!sortOpen)}
+              className="flex h-15 justify-between px-5 py-2.5 items-center gap-2.5 self-stretch rounded-[10px] border border-[rgba(3,40,23,0.35)] bg-[rgba(3,40,23,0.03)] cursor-pointer"
+            >
+              <p className="text-[#1A1A1A] font-dm-sans-500 text-base font-medium leading-5 tracking-[-0.5px]">
+                <span className="text-[#6A7282]">Sort:</span>{" "}
+                {sortOptions.find((o) => o.value === sortBy)?.label}
+              </p>
+              <img
+                src="/arrow-black.svg"
+                alt=""
+                className={`transition-transform ${sortOpen ? "rotate-180" : ""}`}
+              />
+            </div>
+            {sortOpen && (
+              <div className="absolute top-full mt-1 w-full bg-white border border-[#D1D5DC] rounded-[10px] shadow-md z-10 overflow-hidden">
+                {sortOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setSortOpen(false);
+                    }}
+                    className={`px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${sortBy === option.value ? "bg-[rgba(0,226,124,0.08)] text-[#032817] font-medium" : "text-[#1A1A1A]"}`}
+                  >
+                    <p className="font-dm-sans-500 text-sm">{option.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Products Grid */}
         <div className="flex-1 w-full">
-          {/* Active filter chip on mobile */}
           {selectedCategory !== "All" && (
             <div className="flex sm:hidden items-center gap-2 mb-4">
               <span className="text-[#6A7282] font-dm-sans text-xs">
@@ -299,17 +360,17 @@ const SwiftCollections = () => {
             </div>
           )}
 
-          {filteredProducts.length > 0 ? (
+          {sortedProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6 mx-auto">
-              {filteredProducts.map((item, index) => (
+              {sortedProducts.map((item, index) => (
                 <SwiftProductItem
                   key={index}
                   id={item._id}
-                  image={item.image}
-                  name={item.name}
+                  image={item.images || item.image}
+                  name={item.productName || item.name}
                   price={item.price}
                   description={item.description}
-                  inStock={item.inStock}
+                  inStock={isInStock(item)}
                 />
               ))}
             </div>
@@ -334,11 +395,11 @@ const SwiftCollections = () => {
                 No products found
               </p>
               <p className="text-[#6B6B6B] font-dm-sans text-sm text-center px-8">
-                No in-stock items in "{selectedCategory}"
+                No items in "{selectedCategory}"
               </p>
               <button
                 onClick={() => setSelectedCategory("All")}
-                className="px-6 py-2.5 rounded-[10px] bg-white text-white font-dm-sans-500 text-sm"
+                className="px-6 py-2.5 rounded-[10px] bg-[#032817] text-white font-dm-sans-500 text-sm"
               >
                 View All Products
               </button>

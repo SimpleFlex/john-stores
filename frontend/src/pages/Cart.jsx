@@ -56,6 +56,16 @@ const Cart = () => {
     swiftProducts.some((p) => p._id == item._id),
   );
 
+  const getImageSrc = (product) => {
+    const imgArray = product.images || product.image;
+    if (Array.isArray(imgArray)) {
+      return imgArray[0]?.url || imgArray[0];
+    }
+    return imgArray;
+  };
+
+  const getProductName = (product) => product.productName || product.name;
+
   return (
     <div className="bg-[#FAFAFA]">
       <div className="relative w-full">
@@ -103,18 +113,14 @@ const Cart = () => {
                     className="flex flex-row flex-nowrap items-start gap-2.5 p-[17px_16px] rounded-[14px] border border-[#F3F4F6] bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] w-full"
                   >
                     <img
-                      src={
-                        Array.isArray(product.image)
-                          ? product.image[0]
-                          : product.image
-                      }
+                      src={getImageSrc(product)}
                       alt=""
                       className="w-25 sm:w-36.5 h-22.5 sm:h-32.5 shrink-0 mb-0 mr-3.75 sm:mr-6.25 rounded-lg object-cover"
                     />
 
                     <div className="flex-1 mr-3.75 sm:mr-10">
                       <p className="text-[#2D2D2D] mb-1 sm:mb-2 font-dm-sans-500 text-base sm:text-xl font-semibold leading-5.5 sm:leading-6.25 tracking-[-0.5px]">
-                        {product.name}
+                        {getProductName(product)}
                       </p>
                       {item.variantKey !== "default" && (
                         <p className="text-[#6A7282] font-dm-sans mb-2 text-xs font-normal leading-4">

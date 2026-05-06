@@ -4,7 +4,7 @@ const easyMediaSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Name is required"],
+      default: "",
       trim: true,
     },
     email: {

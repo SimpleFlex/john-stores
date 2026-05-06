@@ -15,6 +15,7 @@ import categoryRoutes from "./routes/category.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import easymediaRoutes from "./routes/easymedia.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 
@@ -31,7 +32,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (Postman, curl, mobile)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS blocked: ${origin}`));
@@ -62,6 +62,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/easymedia", easymediaRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // ── Health check ──────────────────────────────────────────────────
 app.get("/", (req, res) =>
@@ -70,8 +71,9 @@ app.get("/", (req, res) =>
 
 // ── Global error handler ──────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error("❌ Error:", err.message);
-  const status = err.status || 500;
+  console.error("❌ Error:", err);
+  console.error("❌ Stack:", err.stack);
+  const status = err.status || err.statusCode || 500;
   res.status(status).json({
     success: false,
     message: err.message || "Internal Server Error",

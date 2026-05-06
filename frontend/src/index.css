@@ -29,13 +29,13 @@ a.active p {
 
 .font-dm-sans-500 {
   font-family: "DM Sans", sans-serif;
-  font-weight: 500; /* medium */
+  font-weight: 500;
   font-style: normal;
 }
 
 .font-dm-sans-700 {
   font-family: "DM Sans", sans-serif;
-  font-weight: 700; /* bold */
+  font-weight: 700;
   font-style: normal;
 }
 
@@ -149,17 +149,22 @@ a.active p {
   animation: cartShake 0.5s ease-in-out;
 }
 
-/* ───────────────────────────────────────────────
-   SMOOTH IMAGE LOADING — Prevents jarring pop-in
-   ─────────────────────────────────────────────── */
-
-/* 1. Placeholder background visible while image loads */
-img {
+/* Smooth image loading — only for product/large images */
+.product-image,
+img[src*="product"],
+img[src*="Product"],
+img[src*="Image_Premium"],
+img[src*="swift_img"],
+img[src*="stores_"],
+img[src*="Container"],
+img[src*="Gift_box"],
+img[src*="Footer"],
+img[src*="Frame_212145"],
+img[src*="John-Enterprise"],
+img[src*="Swift_Logistics"],
+img[src*="easy_media"],
+img[src*="Easy_"] {
   background-color: #e5e7eb;
-}
-
-/* 2. Smooth fade-in when image finishes loading */
-img {
   animation: imageFadeIn 0.4s ease-out;
 }
 
@@ -172,14 +177,11 @@ img {
   }
 }
 
-/* 3. Reserve space for images that have known dimensions
-      (prevents layout shift on images with width/height attrs) */
 img[width][height] {
   height: auto;
 }
 
-/* 4. Subtle skeleton pulse for images inside product cards
-      while they load */
+/* Skeleton pulse for product images */
 img[src*="Image_Premium"],
 img[src*="swift_img"],
 img[src*="stores_"] {
