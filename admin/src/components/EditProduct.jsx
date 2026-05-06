@@ -10,6 +10,7 @@ const EditProduct = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const colorFileInputRef = useRef({});
 
   const [formData, setFormData] = useState({
     productName: "",
@@ -20,16 +21,23 @@ const EditProduct = () => {
     price: "",
     stockQuantity: "",
     sizeOptions: [],
+    color: [],
+    colorImages: {},
     isFeatured: false,
   });
 
   const [categories, setCategories] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
+  const [colorInput, setColorInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [brandOpen, setBrandOpen] = useState(false);
+
+  // Color image state
+  const [colorImagePreviews, setColorImagePreviews] = useState({});
+  const [colorImageFiles, setColorImageFiles] = useState({});
 
   const brands = ["John's Stores", "Swift Logistics"];
 
@@ -56,8 +64,21 @@ const EditProduct = () => {
             price: product.price || "",
             stockQuantity: product.stockQuantity || "",
             sizeOptions: product.sizeOptions || [],
+            color: product.color || [],
+            colorImages: product.colorImages || {},
             isFeatured: product.isFeatured || false,
           });
+
+          // Set color image previews from existing colorImages
+          if (product.colorImages) {
+            const previews = {};
+            for (const [colorName, imgUrl] of Object.entries(
+              product.colorImages,
+            )) {
+              previews[colorName] = imgUrl;
+            }
+            setColorImagePreviews(previews);
+          }
         }
       } catch (err) {
         console.error("Failed to load product:", err);
@@ -68,11 +89,21 @@ const EditProduct = () => {
     load();
   }, [id]);
 
+  // Filter categories by selected brand
+  const filteredCategories = categories.filter(
+    (cat) => !formData.brand || cat.brand === formData.brand,
+  );
+
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === "brand") {
+        updated.category = "";
+      }
+      return updated;
+    });
   };
 
-  // ── Image handlers ───────────────────────────────────────────────
   const handleAddImageUrl = () => {
     const trimmed = imageUrlInput.trim();
     if (!trimmed) return;
@@ -113,7 +144,6 @@ const EditProduct = () => {
     }));
   };
 
-  // ── Size handlers ────────────────────────────────────────────────
   const handleAddSize = () => {
     const trimmed = sizeInput.trim();
     if (!trimmed || formData.sizeOptions.includes(trimmed)) return;
@@ -131,7 +161,48 @@ const EditProduct = () => {
     }));
   };
 
-  // ── Submit ───────────────────────────────────────────────────────
+  const handleAddColor = () => {
+    const trimmed = colorInput.trim();
+    if (!trimmed || formData.color.includes(trimmed)) return;
+    setFormData((prev) => ({ ...prev, color: [...prev.color, trimmed] }));
+    setColorInput("");
+  };
+
+  const handleRemoveColor = (index) => {
+    const removedColor = formData.color[index];
+    setFormData((prev) => ({
+      ...prev,
+      color: prev.color.filter((_, i) => i !== index),
+    }));
+    setColorImagePreviews((prev) => {
+      const next = { ...prev };
+      delete next[removedColor];
+      return next;
+    });
+    setColorImageFiles((prev) => {
+      const next = { ...prev };
+      delete next[removedColor];
+      return next;
+    });
+  };
+
+  const handleColorImageUpload = (color, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setColorImageFiles((prev) => ({ ...prev, [color]: file }));
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setColorImagePreviews((prev) => ({ ...prev, [color]: ev.target.result }));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const getCategoryName = () => {
+    const cat = filteredCategories.find((c) => c._id === formData.category);
+    return cat?.name || "Select Category";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -144,9 +215,16 @@ const EditProduct = () => {
       fd.append("price", formData.price);
       fd.append("stockQuantity", formData.stockQuantity);
       fd.append("sizeOptions", JSON.stringify(formData.sizeOptions));
+      fd.append("color", JSON.stringify(formData.color));
       fd.append("isFeatured", String(formData.isFeatured));
 
-      // Append URL images
+      // Upload color images with their color name as field key
+      for (const color of formData.color) {
+        if (colorImageFiles[color]) {
+          fd.append(`colorImage_${color}`, colorImageFiles[color]);
+        }
+      }
+
       const urlImages = formData.images
         .filter((img) => img.type === "url")
         .map((img) => img.value);
@@ -154,7 +232,6 @@ const EditProduct = () => {
         fd.append("imageUrls", JSON.stringify(urlImages));
       }
 
-      // Append local file uploads
       const localFiles = formData.images.filter(
         (img) => img.type === "file" && img.fileObj,
       );
@@ -163,22 +240,12 @@ const EditProduct = () => {
       });
 
       await updateProduct(id, fd);
-
-      navigate("/products", {
-        state: {
-          updatedProduct: { id, ...formData },
-        },
-      });
+      navigate("/products", { state: { updatedProduct: { id, ...formData } } });
     } catch (err) {
       console.error("Failed to update product:", err);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const getCategoryName = () => {
-    const cat = categories.find((c) => c._id === formData.category);
-    return cat?.name || "Select Category";
   };
 
   if (loading) {
@@ -232,7 +299,7 @@ const EditProduct = () => {
               />
             </div>
 
-            {/* Brand Dropdown */}
+            {/* Brand */}
             <div className="flex flex-col w-full items-start gap-1.5 relative">
               <p className="text-[#2D2D2D] font-medium text-base leading-4.5 font-dm-sans-500">
                 Brand
@@ -268,7 +335,7 @@ const EditProduct = () => {
               )}
             </div>
 
-            {/* Category Dropdown */}
+            {/* Category — filtered by brand */}
             <div className="flex flex-col w-full items-start gap-1.5 relative">
               <p className="text-[#2D2D2D] font-medium text-base leading-4.5 font-dm-sans-500">
                 Category
@@ -288,18 +355,24 @@ const EditProduct = () => {
               </div>
               {categoryOpen && (
                 <div className="absolute top-full mt-1 w-full bg-white border border-[#D1D5DC] rounded-[14px] shadow-md z-10 max-h-48 overflow-y-auto">
-                  {categories.map((cat) => (
-                    <div
-                      key={cat._id}
-                      onClick={() => {
-                        handleChange("category", cat._id);
-                        setCategoryOpen(false);
-                      }}
-                      className="px-5 py-3 hover:bg-gray-50 cursor-pointer font-dm-sans text-sm text-[#2D2D2D]"
-                    >
-                      {cat.name}
+                  {filteredCategories.length === 0 ? (
+                    <div className="px-5 py-3 text-[#717182] text-sm font-dm-sans">
+                      No categories for this brand
                     </div>
-                  ))}
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <div
+                        key={cat._id}
+                        onClick={() => {
+                          handleChange("category", cat._id);
+                          setCategoryOpen(false);
+                        }}
+                        className="px-5 py-3 hover:bg-gray-50 cursor-pointer font-dm-sans text-sm text-[#2D2D2D]"
+                      >
+                        {cat.name}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -351,7 +424,6 @@ const EditProduct = () => {
                   </svg>
                 </button>
               </div>
-
               <div className="flex w-full items-center gap-2">
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -399,7 +471,6 @@ const EditProduct = () => {
                   </svg>
                 </button>
               </div>
-
               {formData.images.length > 0 && (
                 <div className="flex flex-wrap gap-2 w-full">
                   {formData.images.map((img, index) => (
@@ -485,7 +556,7 @@ const EditProduct = () => {
                     onKeyDown={(e) =>
                       e.key === "Enter" && (e.preventDefault(), handleAddSize())
                     }
-                    placeholder="e.g., M, L, XL — press Enter or +"
+                    placeholder="e.g., M, L, XL"
                     className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white font-dm-sans"
                   />
                   <button
@@ -528,6 +599,115 @@ const EditProduct = () => {
                           />
                         </svg>
                       </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Color Options */}
+            <div className="flex flex-col w-full gap-2">
+              <div className="flex flex-col w-full items-start gap-1.5">
+                <label className="text-[#2D2D2D] font-medium text-base leading-[18px] font-dm-sans-500">
+                  Color Options (Optional)
+                </label>
+                <div className="flex w-full gap-2 items-center">
+                  <input
+                    type="text"
+                    value={colorInput}
+                    onChange={(e) => setColorInput(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" &&
+                      (e.preventDefault(), handleAddColor())
+                    }
+                    placeholder="e.g., Red, Blue, Black"
+                    className="flex items-center w-full h-[60px] pt-[21px] pb-[21px] pl-[21px] rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white font-dm-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddColor}
+                    className="flex justify-center items-center w-[48px] h-[48px] rounded-[12px] bg-[#032817] shrink-0 cursor-pointer"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path
+                        d="M10 4v12M4 10h12"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              {formData.color.length > 0 && (
+                <div className="flex flex-col w-full gap-3">
+                  {formData.color.map((clr, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 rounded-[12px] border border-[#D1D5DC] bg-[#FAFAFA]"
+                    >
+                      <div className="flex justify-center items-center h-[32px] px-[14px] gap-[8px] rounded-full border-[0.67px] border-[#0A0A0A] bg-white shrink-0">
+                        <p className="text-[#2D2D2D] font-normal text-xs leading-[14px] font-dm-sans">
+                          {clr}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveColor(index)}
+                          className="flex items-center justify-center w-[14px] h-[14px] rounded-full bg-[#ECECF0] cursor-pointer"
+                        >
+                          <svg
+                            width="8"
+                            height="8"
+                            viewBox="0 0 8 8"
+                            fill="none"
+                          >
+                            <path
+                              d="M1.5 1.5l5 5M6.5 1.5l-5 5"
+                              stroke="#0A0A0A"
+                              strokeWidth="1.2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 flex-1">
+                        {colorImagePreviews[clr] ? (
+                          <img
+                            src={colorImagePreviews[clr]}
+                            alt={clr}
+                            className="w-10 h-10 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="#9CA3AF"
+                            >
+                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                            </svg>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleColorImageUpload(clr, e)}
+                          className="hidden"
+                          ref={(el) => (colorFileInputRef.current[clr] = el)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            colorFileInputRef.current[clr]?.click()
+                          }
+                          className="text-[#032817] font-dm-sans-500 text-xs underline cursor-pointer"
+                        >
+                          {colorImagePreviews[clr]
+                            ? "Change"
+                            : "Add image for " + clr}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

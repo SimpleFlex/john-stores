@@ -1,6 +1,7 @@
 import React, { useState, useContext, useMemo } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { buildWhatsAppMessage } from "../utils/WhatsAppMessage";
+import { createOrder } from "../services/order.service.js";
 
 const CartForm1 = () => {
   const { cartItems, swiftProducts, johnStoresProducts, currency, navigate } =
@@ -11,6 +12,7 @@ const CartForm1 = () => {
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [errors, setErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const [senderName, setSenderName] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
@@ -58,56 +60,63 @@ const CartForm1 = () => {
     "Akure",
   ];
 
-  // ── Detect which store the cart items belong to ───────────────────────────
-  // If ALL items are from John Stores → hide recipient section (self-purchase)
-  // If ANY item is from Swift → show recipient section (logistics delivery)
-  const { cartList, isJohnStoreOnly } = useMemo(() => {
+  const { cartList, isJohnStoreOnly, brand } = useMemo(() => {
     const list = [];
     let hasSwift = false;
     let hasJohn = false;
 
     for (const productId in cartItems) {
-      // Check Swift first, then John Stores
       const swiftProduct = swiftProducts.find((p) => p._id === productId);
       const johnProduct = johnStoresProducts.find((p) => p._id === productId);
       const product = swiftProduct || johnProduct;
 
       if (!product) continue;
 
-      if (swiftProduct) hasSwift = true;
-      if (johnProduct) hasJohn = true;
-
+      let hasQuantity = false;
       for (const variantKey in cartItems[productId]) {
         const quantity = cartItems[productId][variantKey];
         if (quantity > 0) {
           list.push({ product, variantKey, quantity });
+          hasQuantity = true;
         }
+      }
+
+      if (hasQuantity) {
+        if (swiftProduct) hasSwift = true;
+        if (johnProduct) hasJohn = true;
       }
     }
 
-    // Only hide recipient when it's purely a John Stores order
-    return { cartList: list, isJohnStoreOnly: hasJohn && !hasSwift };
+    return {
+      cartList: list,
+      isJohnStoreOnly: hasJohn && !hasSwift,
+      brand: hasSwift ? "Swift Logistics" : "John's Stores",
+    };
   }, [cartItems, swiftProducts, johnStoresProducts]);
 
-  // ── Get price regardless of product type ─────────────────────────────────
-  // Swift: price is a number | John Stores: price is { current, old }
   const getPrice = (product) =>
     typeof product.price === "object" ? product.price.current : product.price;
+
+  const getImageSrc = (product) => {
+    const imgArray = product.images || product.image;
+    if (Array.isArray(imgArray)) {
+      return imgArray[0]?.url || imgArray[0];
+    }
+    return imgArray;
+  };
+
+  const getProductName = (product) => product.productName || product.name;
 
   const subtotal = cartList.reduce(
     (acc, item) => acc + getPrice(item.product) * item.quantity,
     0,
   );
 
-  // ── Validation ────────────────────────────────────────────────────────────
-  // John Stores order: no recipient fields required
-  // Swift order: recipient name + phone are required
   const validate = () => {
     const newErrors = {};
     if (!senderName.trim()) newErrors.senderName = "Full name is required";
     if (!senderPhone.trim()) newErrors.senderPhone = "Phone number is required";
 
-    // Only validate recipient fields for Swift (logistics) orders
     if (!isJohnStoreOnly) {
       if (!recipientName.trim())
         newErrors.recipientName = "Recipient name is required";
@@ -124,7 +133,7 @@ const CartForm1 = () => {
     return newErrors;
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -134,11 +143,11 @@ const CartForm1 = () => {
       return;
     }
 
+    // Open WhatsApp FIRST — synchronously before any async calls
     const message = buildWhatsAppMessage({
       senderName,
       senderPhone,
       senderEmail,
-      // For John Stores orders, recipient defaults to the sender themselves
       recipientName: isJohnStoreOnly ? senderName : recipientName,
       recipientPhone: isJohnStoreOnly ? senderPhone : recipientPhone,
       country,
@@ -154,7 +163,49 @@ const CartForm1 = () => {
 
     const whatsappNumber = "2349039632833";
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${whatsappNumber}?text=${encoded}`, "_blank");
+    const waWindow = window.open(
+      `https://wa.me/${whatsappNumber}?text=${encoded}`,
+      "_blank",
+    );
+
+    if (
+      !waWindow ||
+      waWindow.closed ||
+      typeof waWindow.closed === "undefined"
+    ) {
+      window.location.href = `https://wa.me/${whatsappNumber}?text=${encoded}`;
+    }
+
+    // Save order in background
+    setIsSaving(true);
+    try {
+      await createOrder({
+        brand,
+        sender: senderName,
+        senderPhone,
+        senderEmail,
+        recipient: {
+          name: isJohnStoreOnly ? senderName : recipientName,
+          phone: isJohnStoreOnly ? senderPhone : recipientPhone,
+          address: deliveryAddress,
+        },
+        items: cartList.map((item) => ({
+          product: item.product._id,
+          name: getProductName(item.product),
+          price: getPrice(item.product),
+          quantity: item.quantity,
+          size: item.variantKey !== "default" ? item.variantKey : "",
+          image: getImageSrc(item.product) || "",
+        })),
+        subtotal,
+        deliveryFee: 0,
+        total: subtotal,
+        notes: specialInstructions,
+      });
+    } catch (err) {
+      console.error("Failed to save order:", err);
+    }
+    setIsSaving(false);
   };
 
   const inputClass = (field) =>
@@ -166,12 +217,11 @@ const CartForm1 = () => {
     <div className="bg-[#FAFAFA]">
       <div className="px-4 sm:px-6 md:px-8 py-10 sm:py-12 flex justify-center">
         <div className="flex flex-col xl:flex-row w-full max-w-300 gap-6 xl:gap-10">
-          {/* ── LEFT SIDE ─────────────────────────────────────────────────── */}
+          {/* LEFT SIDE */}
           <div className="flex flex-col flex-1 gap-7.5">
-            {/* SENDER DETAILS — always shown */}
+            {/* SENDER DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
-                {/* John Stores: "Your Details" | Swift: "Sender Details" */}
                 {isJohnStoreOnly ? "Your Details" : "Sender Details"}
               </p>
 
@@ -231,7 +281,7 @@ const CartForm1 = () => {
               </div>
             </div>
 
-            {/* RECIPIENT DETAILS — only shown for Swift (logistics) orders */}
+            {/* RECIPIENT DETAILS — only for Swift */}
             {!isJohnStoreOnly && (
               <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
                 <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
@@ -284,22 +334,19 @@ const CartForm1 = () => {
               </div>
             )}
 
-            {/* DELIVERY DETAILS — always shown, inside its own card for John Stores */}
+            {/* DELIVERY DETAILS */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Delivery Details
               </p>
 
-              {/* COUNTRY */}
               <div className="flex flex-col gap-2 relative w-full" id="country">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery Country <span className="text-[#FB2C36]">*</span>
                 </label>
                 <div
                   onClick={() => setCountryOpen(!countryOpen)}
-                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${
-                    errors.country ? "border-[#FB2C36]" : "border-[#D1D5DC]"
-                  } bg-white cursor-pointer`}
+                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.country ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
                 >
                   <p className={country ? "text-black" : "text-gray-400"}>
                     {country || "Select Country"}
@@ -333,16 +380,13 @@ const CartForm1 = () => {
                 )}
               </div>
 
-              {/* CITY */}
               <div className="flex flex-col gap-2 relative w-full" id="city">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery City <span className="text-[#FB2C36]">*</span>
                 </label>
                 <div
                   onClick={() => setCityOpen(!cityOpen)}
-                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${
-                    errors.city ? "border-[#FB2C36]" : "border-[#D1D5DC]"
-                  } bg-white cursor-pointer`}
+                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.city ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
                 >
                   <p className={city ? "text-black" : "text-gray-400"}>
                     {city || "Select City"}
@@ -374,7 +418,6 @@ const CartForm1 = () => {
                 )}
               </div>
 
-              {/* DELIVERY ADDRESS */}
               <div className="flex flex-col gap-2" id="deliveryAddress">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Full Delivery Address{" "}
@@ -387,11 +430,7 @@ const CartForm1 = () => {
                     setDeliveryAddress(e.target.value);
                     setErrors((prev) => ({ ...prev, deliveryAddress: "" }));
                   }}
-                  className={`w-full h-22.5 px-5.25 pt-5.25 pb-12.75 rounded-[14px] border ${
-                    errors.deliveryAddress
-                      ? "border-[#FB2C36]"
-                      : "border-[#D1D5DC]"
-                  } outline-none focus:border-[#00A63E] transition-colors`}
+                  className={`w-full h-22.5 px-5.25 pt-5.25 pb-12.75 rounded-[14px] border ${errors.deliveryAddress ? "border-[#FB2C36]" : "border-[#D1D5DC]"} outline-none focus:border-[#00A63E] transition-colors`}
                   placeholder="Full street address including landmarks"
                 />
                 {errors.deliveryAddress && (
@@ -401,7 +440,6 @@ const CartForm1 = () => {
                 )}
               </div>
 
-              {/* DELIVERY DATE */}
               <div className="flex flex-col gap-2" id="deliveryDate">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Preferred Delivery Date{" "}
@@ -424,12 +462,11 @@ const CartForm1 = () => {
               </div>
             </div>
 
-            {/* GIFT PERSONALIZATION — always shown */}
+            {/* GIFT PERSONALIZATION */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Gift Personalization
               </p>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Gift Message (Optional)
@@ -442,7 +479,6 @@ const CartForm1 = () => {
                   placeholder="Add a personal message"
                 />
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Special Instructions (Optional)
@@ -458,7 +494,7 @@ const CartForm1 = () => {
             </div>
           </div>
 
-          {/* ── RIGHT SIDE — Order Summary ─────────────────────────────────── */}
+          {/* RIGHT SIDE — Order Summary */}
           <div className="w-full xl:w-100 flex flex-col gap-6">
             <div className="p-5 sm:p-6.25 flex flex-col gap-5 rounded-[14px] border-2 border-[#F3F4F6] bg-white shadow">
               <p className="text-[#2D2D2D] font-clash-grotesk text-lg sm:text-[22px] font-medium">
@@ -470,16 +506,12 @@ const CartForm1 = () => {
                   <div key={index} className="flex items-start gap-3">
                     <img
                       className="w-22.5 h-16.25 rounded-lg object-cover"
-                      src={
-                        Array.isArray(item.product.image)
-                          ? item.product.image[0]
-                          : item.product.image
-                      }
+                      src={getImageSrc(item.product)}
                       alt=""
                     />
                     <div className="flex flex-col gap-1">
                       <p className="text-[#101828] font-dm-sans-700 text-base sm:text-lg font-extrabold">
-                        {item.product.name}
+                        {getProductName(item.product)}
                       </p>
                       {item.variantKey !== "default" && (
                         <p className="text-[#4A5565] text-xs">
@@ -507,7 +539,6 @@ const CartForm1 = () => {
                   {subtotal.toLocaleString()}
                 </p>
               </div>
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] opacity-50 text-sm sm:text-base">
                   Delivery Fee
@@ -516,7 +547,6 @@ const CartForm1 = () => {
                   To be confirmed
                 </p>
               </div>
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] text-sm sm:text-base font-medium">
                   Estimated Total

@@ -10,10 +10,10 @@ import { protect } from "../middleware/Auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", protect, getProducts); // GET    /api/products
-router.get("/:id", protect, getProduct); // GET    /api/products/:id
-router.post("/", protect, createProduct); // POST   /api/products
-router.put("/:id", protect, updateProduct); // PUT    /api/products/:id
-router.delete("/:id", protect, deleteProduct); // DELETE /api/products/:id
+router.get("/", getProducts); // GET    /api/products — PUBLIC
+router.get("/:id", getProduct); // GET    /api/products/:id — PUBLIC
+router.post("/", protect, createProduct); // POST   /api/products — ADMIN only
+router.put("/:id", protect, updateProduct); // PUT    /api/products/:id — ADMIN only
+router.delete("/:id", protect, deleteProduct); // DELETE /api/products/:id — ADMIN only
 
 export default router;

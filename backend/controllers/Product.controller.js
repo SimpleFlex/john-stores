@@ -52,6 +52,7 @@ export const createProduct = async (req, res, next) => {
       price,
       stockQuantity,
       sizeOptions,
+      color,
       isFeatured,
     } = req.body;
 
@@ -77,6 +78,24 @@ export const createProduct = async (req, res, next) => {
       urls.forEach((url) => images.push({ url, public_id: "" }));
     }
 
+    // Upload color-specific images
+    let colorImages = {};
+    if (color) {
+      const colors = Array.isArray(color) ? color : JSON.parse(color);
+      for (const clr of colors) {
+        const fieldName = `colorImage_${clr}`;
+        if (req.files && req.files[fieldName]) {
+          const file = Array.isArray(req.files[fieldName])
+            ? req.files[fieldName][0]
+            : req.files[fieldName];
+          const result = await cloudinary.uploader.upload(file.tempFilePath, {
+            folder: "je-admin/products/colors",
+          });
+          colorImages[clr] = result.secure_url;
+        }
+      }
+    }
+
     const product = await Product.create({
       productName,
       brand,
@@ -90,6 +109,8 @@ export const createProduct = async (req, res, next) => {
           ? sizeOptions
           : JSON.parse(sizeOptions)
         : [],
+      color: color ? (Array.isArray(color) ? color : JSON.parse(color)) : [],
+      colorImages: colorImages,
       isFeatured: isFeatured === "true",
     });
 
@@ -117,6 +138,7 @@ export const updateProduct = async (req, res, next) => {
       price,
       stockQuantity,
       sizeOptions,
+      color,
       isFeatured,
       removeImageIds,
     } = req.body;
@@ -154,6 +176,38 @@ export const updateProduct = async (req, res, next) => {
       urls.forEach((url) => product.images.push({ url, public_id: "" }));
     }
 
+    // Upload new color images
+    if (color) {
+      const colors = Array.isArray(color) ? color : JSON.parse(color);
+      for (const clr of colors) {
+        const fieldName = `colorImage_${clr}`;
+        if (req.files && req.files[fieldName]) {
+          // Delete old color image if exists
+          const oldUrl = product.colorImages?.get?.(clr);
+          if (oldUrl) {
+            try {
+              const publicId = oldUrl
+                .split("/")
+                .slice(-2)
+                .join("/")
+                .split(".")[0];
+              await cloudinary.uploader.destroy(publicId);
+            } catch (e) {
+              // ignore cleanup errors
+            }
+          }
+
+          const file = Array.isArray(req.files[fieldName])
+            ? req.files[fieldName][0]
+            : req.files[fieldName];
+          const result = await cloudinary.uploader.upload(file.tempFilePath, {
+            folder: "je-admin/products/colors",
+          });
+          product.colorImages.set(clr, result.secure_url);
+        }
+      }
+    }
+
     // Update fields
     if (productName) product.productName = productName;
     if (brand) product.brand = brand;
@@ -163,6 +217,7 @@ export const updateProduct = async (req, res, next) => {
     if (stockQuantity !== undefined)
       product.stockQuantity = Number(stockQuantity);
     if (sizeOptions) product.sizeOptions = JSON.parse(sizeOptions);
+    if (color) product.color = Array.isArray(color) ? color : JSON.parse(color);
     if (isFeatured !== undefined) product.isFeatured = isFeatured === "true";
 
     await product.save();
@@ -186,6 +241,20 @@ export const deleteProduct = async (req, res, next) => {
     // Delete all images from Cloudinary
     for (const img of product.images) {
       if (img.public_id) await cloudinary.uploader.destroy(img.public_id);
+    }
+
+    // Delete color images from Cloudinary
+    if (product.colorImages) {
+      for (const [color, url] of product.colorImages) {
+        if (url) {
+          try {
+            const publicId = url.split("/").slice(-2).join("/").split(".")[0];
+            await cloudinary.uploader.destroy(publicId);
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
     }
 
     await product.deleteOne();

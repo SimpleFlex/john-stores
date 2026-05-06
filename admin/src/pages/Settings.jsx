@@ -1,6 +1,10 @@
 import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { updatePassword, updateProfile } from "../services/api.service.js";
+import {
+  updatePassword,
+  updateProfile,
+  updateEmail,
+} from "../services/api.service.js";
 
 const Settings = () => {
   const { admin, logout } = useAuth();
@@ -13,6 +17,7 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  const [adminName, setAdminName] = useState(admin?.name || "");
   const [whatsappNumber, setWhatsappNumber] = useState(
     admin?.whatsappNumber || "",
   );
@@ -22,6 +27,13 @@ const Settings = () => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState({ type: "", text: "" });
+
+  // Email change state
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState({ type: "", text: "" });
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -35,6 +47,7 @@ const Settings = () => {
     setProfileMessage({ type: "", text: "" });
     try {
       const fd = new FormData();
+      fd.append("name", adminName.trim());
       fd.append("whatsappNumber", whatsappNumber);
       fd.append("currency", currency);
       if (avatarFile) fd.append("avatar", avatarFile);
@@ -42,9 +55,13 @@ const Settings = () => {
       localStorage.setItem("adminData", JSON.stringify(res.admin));
       window.location.reload();
     } catch (err) {
+      console.error("Profile update error:", err);
       setProfileMessage({
         type: "error",
-        text: err.response?.data?.message || "Failed to update profile.",
+        text:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to update profile.",
       });
     } finally {
       setIsSavingProfile(false);
@@ -83,6 +100,36 @@ const Settings = () => {
     }
   };
 
+  const handleUpdateEmail = async (e) => {
+    e.preventDefault();
+    if (!newEmail.trim() || !emailPassword.trim()) {
+      setEmailMessage({ type: "error", text: "All fields are required." });
+      return;
+    }
+    setIsUpdatingEmail(true);
+    setEmailMessage({ type: "", text: "" });
+    try {
+      await updateEmail(newEmail, emailPassword);
+      setEmailMessage({
+        type: "success",
+        text: "Email updated successfully! Please log in again.",
+      });
+      setNewEmail("");
+      setEmailPassword("");
+      setTimeout(() => {
+        setShowEmailForm(false);
+        logout();
+      }, 2000);
+    } catch (err) {
+      setEmailMessage({
+        type: "error",
+        text: err.response?.data?.message || "Failed to update email.",
+      });
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-4">
       {/* ── CARD 1: Admin Profile + Settings ──────────────────────── */}
@@ -90,7 +137,6 @@ const Settings = () => {
         {/* Admin Profile row */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-[rgba(107,107,107,0.10)]">
           <div className="flex items-center gap-3">
-            {/* Avatar */}
             <div
               onClick={() => fileInputRef.current?.click()}
               className="w-[52px] h-[52px] rounded-full bg-[#032817] flex items-center justify-center shrink-0 overflow-hidden cursor-pointer relative group"
@@ -103,10 +149,11 @@ const Settings = () => {
                 />
               ) : (
                 <p className="text-white font-clash-grotesk font-medium text-xl">
-                  {admin?.name?.charAt(0)?.toUpperCase() || "A"}
+                  {adminName?.charAt(0)?.toUpperCase() ||
+                    admin?.name?.charAt(0)?.toUpperCase() ||
+                    "A"}
                 </p>
               )}
-              {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path
@@ -127,18 +174,20 @@ const Settings = () => {
               className="hidden"
             />
 
-            {/* Name + email + role */}
             <div className="flex flex-col gap-0.5">
-              <p className="text-[#2D2D2D] font-semibold text-sm leading-[20px] tracking-[-0.3px] font-dm-sans-700">
-                {admin?.name || "Admin"}
-              </p>
+              <input
+                type="text"
+                value={adminName}
+                onChange={(e) => setAdminName(e.target.value)}
+                className="text-[#2D2D2D] font-semibold text-sm leading-[20px] tracking-[-0.3px] font-dm-sans-700 bg-transparent border-b border-[#D1D5DC] focus:border-[#032817] outline-none w-[200px] transition-colors"
+                placeholder="Enter name"
+              />
               <p className="text-[#6B6B6B] font-medium text-xs leading-[18px] tracking-[-0.3px] font-dm-sans-500">
                 {admin?.email || "—"}
               </p>
             </div>
           </div>
 
-          {/* Edit button */}
           <button
             type="button"
             onClick={() => setShowPasswordForm((p) => !p)}
@@ -161,7 +210,7 @@ const Settings = () => {
           </button>
         </div>
 
-        {/* Password form (slides in when Edit is clicked) */}
+        {/* Password form */}
         {showPasswordForm && (
           <form
             onSubmit={handleUpdatePassword}
@@ -224,6 +273,66 @@ const Settings = () => {
           </form>
         )}
 
+        {/* Email Change Form */}
+        {showEmailForm && (
+          <form
+            onSubmit={handleUpdateEmail}
+            className="flex flex-col gap-4 px-5 py-5 bg-[#FAFAFA] border-b border-[rgba(107,107,107,0.10)]"
+          >
+            <p className="text-[#2D2D2D] font-medium text-sm font-clash-grotesk">
+              Change Email Address
+            </p>
+
+            {emailMessage.text && (
+              <div
+                className={`px-4 py-3 rounded-[10px] ${emailMessage.type === "success" ? "bg-[#DCFCE7] border border-[#BBF7D0]" : "bg-[#FFF0F0] border border-[#FFD0D0]"}`}
+              >
+                <p
+                  className={`text-sm font-dm-sans ${emailMessage.type === "success" ? "text-[#008236]" : "text-[#C10007]"}`}
+                >
+                  {emailMessage.text}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
+                New Email
+              </label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="Enter new email address"
+                disabled={isUpdatingEmail}
+                className="w-full h-[48px] px-5 rounded-[12px] border-[1.5px] border-[#D1D5DC] bg-white outline-none focus:border-[#032817] transition-colors font-dm-sans text-sm disabled:opacity-50"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={emailPassword}
+                onChange={(e) => setEmailPassword(e.target.value)}
+                placeholder="Enter current password"
+                disabled={isUpdatingEmail}
+                className="w-full h-[48px] px-5 rounded-[12px] border-[1.5px] border-[#D1D5DC] bg-white outline-none focus:border-[#032817] transition-colors font-dm-sans text-sm disabled:opacity-50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isUpdatingEmail}
+              className="flex justify-center items-center h-[48px] rounded-[12px] bg-[#032817] text-white font-medium text-sm font-clash-grotesk disabled:opacity-60 cursor-pointer hover:bg-[#042e1e] transition-colors"
+            >
+              {isUpdatingEmail ? "Updating..." : "Update Email"}
+            </button>
+          </form>
+        )}
+
         {/* Profile message */}
         {profileMessage.text && (
           <div
@@ -242,7 +351,10 @@ const Settings = () => {
           <p className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
             Admin Email
           </p>
-          <div className="w-full h-[50px] px-5 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white flex items-center">
+          <div
+            className="w-full h-[50px] px-5 rounded-[14px] border-[1.5px] border-[#D1D5DC] bg-white flex items-center cursor-pointer hover:border-[#032817] transition-colors"
+            onClick={() => setShowEmailForm(true)}
+          >
             <p className="text-[#6B6B6B] font-dm-sans text-sm truncate">
               {admin?.email || "—"}
             </p>
@@ -313,14 +425,12 @@ const Settings = () => {
           Add Sub-Admin (Coming Soon)
         </button>
 
-        {/* Save Settings button — bottom right, matches Figma */}
         <div className="flex justify-end mt-2">
           <button
             onClick={handleUpdateProfile}
             disabled={isSavingProfile}
             className="flex items-center gap-2 px-5 h-[44px] rounded-[12px] bg-[#16CB5E] hover:bg-[#12b554] transition-colors text-white font-medium text-sm font-clash-grotesk disabled:opacity-60 cursor-pointer"
           >
-            {/* Save icon */}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path
                 d="M13 14H3a1 1 0 01-1-1V3a1 1 0 011-1h8l3 3v8a1 1 0 01-1 1z"
