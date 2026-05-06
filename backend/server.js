@@ -8,14 +8,14 @@ import fileUpload from "express-fileupload";
 
 import connectDB from "./database/db.js";
 
-import authRoutes from "./routes/auth.routes.js";
-import dashboardRoutes from "./routes/dashboard.routes.js";
-import productRoutes from "./routes/product.routes.js";
-import categoryRoutes from "./routes/category.routes.js";
-import orderRoutes from "./routes/order.routes.js";
-import analyticsRoutes from "./routes/analytics.routes.js";
-import easymediaRoutes from "./routes/easymedia.routes.js";
-import notificationRoutes from "./routes/notification.routes.js";
+import authRoutes from "./routes/Auth.routes.js";
+import dashboardRoutes from "./routes/Dashboard.routes.js";
+import productRoutes from "./routes/Product.routes.js";
+import categoryRoutes from "./routes/Category.routes.js";
+import orderRoutes from "./routes/Order.routes.js";
+import analyticsRoutes from "./routes/Analytics.routes.js";
+import easymediaRoutes from "./routes/Easymedia.routes.js";
+import notificationRoutes from "./routes/Notification.routes.js";
 
 const app = express();
 
@@ -84,7 +84,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
-  app.listen(PORT, () =>
-    console.log(`🚀 Server running on http://localhost:${PORT}`),
+  app.listen(PORT, "0.0.0.0", () =>
+    console.log(`🚀 Server running on port ${PORT}`),
   );
 });
