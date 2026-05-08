@@ -5,7 +5,7 @@ const orderItemSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
   },
-  name: { type: String, required: true }, // snapshot at time of order
+  name: { type: String, required: true },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true, min: 1 },
   size: { type: String, default: "" },
@@ -14,7 +14,6 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
-    // Auto-generated e.g. JS-2026-021
     orderId: {
       type: String,
       unique: true,
@@ -26,28 +25,26 @@ const orderSchema = new mongoose.Schema(
       required: [true, "Brand is required"],
     },
 
-    // ── Sender (the person placing the order) ────────────────────
     sender: { type: String, required: [true, "Sender name is required"] },
     senderPhone: { type: String, default: "" },
     senderEmail: { type: String, default: "" },
 
-    // ── Recipient (who receives the gift) ────────────────────────
-    // Optional — only for gift orders
     recipient: {
       name: { type: String, default: "-" },
       phone: { type: String, default: "-" },
       address: { type: String, default: "" },
     },
 
-    // ── Items ────────────────────────────────────────────────────
     items: [orderItemSchema],
 
-    // ── Pricing ──────────────────────────────────────────────────
     subtotal: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, default: 0 },
     total: { type: Number, required: true, min: 0 },
 
-    // ── Status ───────────────────────────────────────────────────
+    // ── Profit & Final Price ────────────────────────────────────
+    finalPrice: { type: Number, default: 0 },
+    profit: { type: Number, default: 0 },
+
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Refunded"],
@@ -65,7 +62,6 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// ── Auto-generate orderId before saving ──────────────────────────
 orderSchema.pre("save", async function () {
   if (!this.orderId) {
     const count = await mongoose.model("Order").countDocuments();
