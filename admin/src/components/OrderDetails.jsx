@@ -46,20 +46,22 @@ const OrderDetails = ({
     setOpen(false);
     onUpdateStatus?.(value);
   };
+
   const handlePaymentStatus = (value) => {
     onUpdatePayment?.(value);
   };
 
-  const handleSaveProfit = () => {
+  const handleSaveProfit = async () => {
     if (!finalPrice || !profit) return;
     console.log("📤 Saving profit:", {
       finalPrice: Number(finalPrice),
       profit: Number(profit),
     });
-    onUpdatePayment?.("Paid", {
+    await onUpdatePayment?.("Paid", {
       finalPrice: Number(finalPrice),
       profit: Number(profit),
     });
+    onClose(); // close modal and go back to orders after saving
   };
 
   if (!orderData) return null;
