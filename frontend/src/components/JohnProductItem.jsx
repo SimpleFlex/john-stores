@@ -1,15 +1,22 @@
 import React, { useContext, useState, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/assets";
+import { useNavigate } from "react-router-dom";
 
-const JohnProductItem = ({ id, name, price, image, reviews }) => {
-  const { currency, addToCart, navigate } = useContext(ShopContext);
+const JohnProductItem = ({ id, name, price, image, reviews, description }) => {
+  const { currency, addToCart } = useContext(ShopContext);
+  const navigate = useNavigate();
 
   const [added, setAdded] = useState(false);
   const [flying, setFlying] = useState(false);
   const [flyStyle, setFlyStyle] = useState({});
 
   const buttonRef = useRef(null);
+
+  const handleViewDetails = (e) => {
+    e?.stopPropagation();
+    navigate(`/john-stores/product/${id}`);
+  };
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -55,12 +62,6 @@ const JohnProductItem = ({ id, name, price, image, reviews }) => {
     addToCart(id, null, null, 1);
   };
 
-  const handleBuyNow = (e) => {
-    e.stopPropagation();
-    addToCart(id, null, null, 1);
-    navigate("/checkout/john-stores");
-  };
-
   const getImageSrc = () => {
     if (Array.isArray(image)) {
       return image[0]?.url || image[0];
@@ -71,12 +72,14 @@ const JohnProductItem = ({ id, name, price, image, reviews }) => {
   const displayPrice = typeof price === "object" ? price.current : price;
   const oldPrice = typeof price === "object" ? price.old : null;
 
-  // Artificial star rating if none provided
   const rating = reviews?.rating || (Math.random() * 1 + 4).toFixed(1);
   const reviewCount = reviews?.count || Math.floor(Math.random() * 20) + 1;
 
   return (
-    <div className="flex w-full pb-4 flex-col rounded-2xl bg-white shadow-lg overflow-hidden relative">
+    <div
+      onClick={handleViewDetails}
+      className="flex w-full flex-col rounded-2xl bg-white shadow-lg overflow-hidden relative cursor-pointer active:scale-[0.98] transition-transform duration-150"
+    >
       {flying && (
         <img
           src={getImageSrc()}
@@ -86,7 +89,7 @@ const JohnProductItem = ({ id, name, price, image, reviews }) => {
         />
       )}
 
-      <div className="w-full aspect-square overflow-hidden rounded-t-2xl">
+      <div className="w-full aspect-[4/3] overflow-hidden rounded-t-2xl">
         <img
           src={getImageSrc()}
           alt={name}
@@ -94,18 +97,26 @@ const JohnProductItem = ({ id, name, price, image, reviews }) => {
         />
       </div>
 
-      <div className="px-4 py-4">
-        <p className="text-[#2D2D2D] font-dm-sans-700 text-xl mb-2.5 font-extrabold leading-6.25">
-          {name}
-        </p>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-end gap-1.25">
-            <p className="text-[#E3494E] font-clash-grotesk text-base sm:text-lg font-medium leading-6">
+      <div className="flex flex-col p-3 sm:p-4 gap-1.5 sm:gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-[#2D2D2D] font-dm-sans-700 text-sm sm:text-base font-bold leading-5 sm:leading-6 tracking-[-0.5px] line-clamp-1">
+            {name}
+          </p>
+          {description && (
+            <p className="text-[#6A7282] font-dm-sans text-[10px] sm:text-xs font-normal leading-3.5 sm:leading-4 line-clamp-2">
+              {description}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-end gap-1.5">
+            <p className="text-[#E3494E] font-clash-grotesk text-sm sm:text-lg font-medium leading-5 sm:leading-6">
               {currency}
               {displayPrice?.toLocaleString()}
             </p>
             {oldPrice && (
-              <p className="text-[#2A2A2A] font-clash-grotesk text-[8px] font-medium leading-4.75 line-through opacity-50">
+              <p className="text-[#2A2A2A] font-clash-grotesk text-[10px] font-medium leading-4 line-through opacity-50">
                 {currency}
                 {oldPrice.toLocaleString()}
               </p>
@@ -113,39 +124,40 @@ const JohnProductItem = ({ id, name, price, image, reviews }) => {
           </div>
 
           <div className="flex items-center gap-1">
-            <img src={assets.star_icon} alt="" />
-            <p className="text-[#2A2A2A] font-clash-grotesk text-[8px] font-medium opacity-50">
+            <img src={assets.star_icon} alt="" className="w-3.5 h-3.5" />
+            <p className="text-[#2A2A2A] font-clash-grotesk text-[10px] font-medium opacity-50">
               {rating} ({reviewCount} Review{reviewCount !== 1 ? "s" : ""})
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="flex gap-2 flex-wrap px-2">
-        <button
-          ref={buttonRef}
-          onClick={handleAddToCart}
-          className={`inline-flex cursor-pointer px-4 sm:px-6 py-2 justify-center items-center rounded-[10px] border transition-all duration-150 active:scale-95 active:shadow-none ${
-            added
-              ? "border-[#00A63E] bg-[rgba(0,166,62,0.08)]"
-              : "border-[rgba(227,73,78,0.25)] bg-[rgba(227,73,78,0.03)] shadow-[inset_0_0_36px_0_#EEEFF1] hover:bg-[rgba(227,73,78,0.08)] active:bg-[rgba(227,73,78,0.15)]"
-          }`}
+        <div
+          className="flex gap-2 items-center"
+          onClick={(e) => e.stopPropagation()}
         >
-          <p
-            className={`font-dm-sans-500 text-xs font-medium leading-6 text-center whitespace-nowrap ${added ? "text-[#00A63E]" : "text-black"}`}
+          {/* View Details */}
+          <button
+            onClick={handleViewDetails}
+            className="flex px-4 py-2 justify-center cursor-pointer items-center rounded-[10px] border border-[rgba(227,73,78,0.25)] bg-[rgba(227,73,78,0.03)] shadow-[inset_0_0_36px_0_#EEEFF1]"
           >
-            {added ? "✓ Added" : "Add To Cart"}
-          </p>
-        </button>
+            <p className="text-black font-dm-sans-500 text-[11px] sm:text-xs font-medium leading-5 whitespace-nowrap">
+              View Details
+            </p>
+          </button>
 
-        <button
-          onClick={handleBuyNow}
-          className="inline-flex cursor-pointer px-7 sm:px-9 py-2 justify-center items-center rounded-[10px] border border-[rgba(227,73,78,0.25)] bg-[#E3494E] shadow-md transition-all duration-150 hover:bg-[#d03f44] active:scale-95 active:shadow-none active:bg-[#bc3840]"
-        >
-          <p className="font-dm-sans-500 text-white text-xs font-medium leading-6 text-center">
-            Buy Now
-          </p>
-        </button>
+          {/* Add to Cart */}
+          <button
+            ref={buttonRef}
+            onClick={handleAddToCart}
+            className={`flex-1 px-4 py-2 justify-center cursor-pointer items-center rounded-[10px] transition-all duration-200 active:scale-95 ${
+              added ? "bg-[#00A63E]" : "bg-[#E3494E] shadow-md"
+            }`}
+          >
+            <p className="text-white text-center font-dm-sans-500 text-[11px] sm:text-xs font-medium leading-5 whitespace-nowrap">
+              {added ? "✓ Added" : "Add to Cart"}
+            </p>
+          </button>
+        </div>
       </div>
     </div>
   );
