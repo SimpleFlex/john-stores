@@ -71,23 +71,18 @@ export const createOrder = async (req, res, next) => {
   try {
     const order = await Order.create(req.body);
 
-    // Send confirmation email
     try {
-      console.log("📧 senderEmail:", order.senderEmail);
       if (order.senderEmail) {
         await sendEmail({
           to: order.senderEmail,
           subject: `Order Confirmed - ${order.orderId}`,
           html: orderConfirmationTemplate(order),
         });
-      } else {
-        console.log("⚠️ No sender email provided — skipping email");
       }
     } catch (emailErr) {
       console.log("⚠️ Email failed but order was saved:", emailErr.message);
     }
 
-    // Create notification for new order
     try {
       await Notification.create({
         title: "New Order",
@@ -108,7 +103,13 @@ export const createOrder = async (req, res, next) => {
 // ── PUT /api/orders/:id/payment ──────────────────────────────────
 export const updatePaymentStatus = async (req, res, next) => {
   try {
-    const { paymentStatus } = req.body;
+    const { paymentStatus, finalPrice, profit } = req.body;
+    console.log("📥 Received payment update:", {
+      paymentStatus,
+      finalPrice,
+      profit,
+    });
+
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res
@@ -118,6 +119,19 @@ export const updatePaymentStatus = async (req, res, next) => {
 
     const wasAlreadyPaid = order.paymentStatus === "Paid";
     order.paymentStatus = paymentStatus;
+
+    // Save finalPrice and profit if provided
+    if (finalPrice !== undefined && finalPrice !== null) {
+      order.finalPrice = Number(finalPrice);
+    }
+    if (profit !== undefined && profit !== null) {
+      order.profit = Number(profit);
+    }
+
+    console.log("💾 Saving to order:", {
+      finalPrice: order.finalPrice,
+      profit: order.profit,
+    });
 
     if (paymentStatus === "Paid" && order.orderStatus === "Pending") {
       order.orderStatus = "Processing";
@@ -145,10 +159,6 @@ export const updatePaymentStatus = async (req, res, next) => {
           subject: `Payment Confirmed - ${order.orderId}`,
           html: paymentConfirmedTemplate(order),
         });
-        console.log(
-          "📧 Payment confirmation email sent to:",
-          order.senderEmail,
-        );
       } catch (emailErr) {
         console.log("⚠️ Payment email failed:", emailErr.message);
       }
@@ -179,10 +189,7 @@ export const updateOrderStatus = async (req, res, next) => {
         await sendEmail({
           to: order.senderEmail,
           subject: `Order Update - ${order.orderId}`,
-          html: `
-            <h2>Hello ${order.sender},</h2>
-            <p>Your order <strong>${order.orderId}</strong> has been updated to: <strong>${orderStatus}</strong>.</p>
-          `,
+          html: `<h2>Hello ${order.sender},</h2><p>Your order <strong>${order.orderId}</strong> has been updated to: <strong>${orderStatus}</strong>.</p>`,
         });
       } catch (emailErr) {
         console.log("⚠️ Status update email failed:", emailErr.message);
@@ -215,7 +222,6 @@ export const completeOrder = async (req, res, next) => {
           subject: `Order Delivered! - ${order.orderId}`,
           html: orderCompletedTemplate(order),
         });
-        console.log("📧 Completion email sent to:", order.senderEmail);
       } catch (emailErr) {
         console.log("⚠️ Completion email failed:", emailErr.message);
       }
