@@ -4,6 +4,7 @@ import {
   updatePassword,
   updateProfile,
   updateEmail,
+  resetDashboard,
 } from "../services/api.service.js";
 
 const Settings = () => {
@@ -28,12 +29,14 @@ const Settings = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState({ type: "", text: "" });
 
-  // Email change state
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState({ type: "", text: "" });
+
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -130,11 +133,24 @@ const Settings = () => {
     }
   };
 
+  const handleResetDashboard = async () => {
+    setIsResetting(true);
+    try {
+      await resetDashboard();
+      window.location.reload();
+    } catch (err) {
+      alert(
+        "Failed to reset dashboard: " +
+          (err.response?.data?.message || err.message),
+      );
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* ── CARD 1: Admin Profile + Settings ──────────────────────── */}
       <div className="flex flex-col w-full rounded-[20px] border border-[rgba(107,107,107,0.15)] bg-white overflow-hidden">
-        {/* Admin Profile row */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-[rgba(107,107,107,0.10)]">
           <div className="flex items-center gap-3">
             <div
@@ -210,7 +226,6 @@ const Settings = () => {
           </button>
         </div>
 
-        {/* Password form */}
         {showPasswordForm && (
           <form
             onSubmit={handleUpdatePassword}
@@ -219,7 +234,6 @@ const Settings = () => {
             <p className="text-[#2D2D2D] font-medium text-sm font-clash-grotesk">
               Update Password
             </p>
-
             {message.text && (
               <div
                 className={`px-4 py-3 rounded-[10px] ${message.type === "success" ? "bg-[#DCFCE7] border border-[#BBF7D0]" : "bg-[#FFF0F0] border border-[#FFD0D0]"}`}
@@ -231,7 +245,6 @@ const Settings = () => {
                 </p>
               </div>
             )}
-
             {[
               {
                 label: "Current Password",
@@ -262,7 +275,6 @@ const Settings = () => {
                 />
               </div>
             ))}
-
             <button
               type="submit"
               disabled={isLoading}
@@ -273,7 +285,6 @@ const Settings = () => {
           </form>
         )}
 
-        {/* Email Change Form */}
         {showEmailForm && (
           <form
             onSubmit={handleUpdateEmail}
@@ -282,7 +293,6 @@ const Settings = () => {
             <p className="text-[#2D2D2D] font-medium text-sm font-clash-grotesk">
               Change Email Address
             </p>
-
             {emailMessage.text && (
               <div
                 className={`px-4 py-3 rounded-[10px] ${emailMessage.type === "success" ? "bg-[#DCFCE7] border border-[#BBF7D0]" : "bg-[#FFF0F0] border border-[#FFD0D0]"}`}
@@ -294,7 +304,6 @@ const Settings = () => {
                 </p>
               </div>
             )}
-
             <div className="flex flex-col gap-1.5">
               <label className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
                 New Email
@@ -308,7 +317,6 @@ const Settings = () => {
                 className="w-full h-[48px] px-5 rounded-[12px] border-[1.5px] border-[#D1D5DC] bg-white outline-none focus:border-[#032817] transition-colors font-dm-sans text-sm disabled:opacity-50"
               />
             </div>
-
             <div className="flex flex-col gap-1.5">
               <label className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
                 Confirm Password
@@ -322,7 +330,6 @@ const Settings = () => {
                 className="w-full h-[48px] px-5 rounded-[12px] border-[1.5px] border-[#D1D5DC] bg-white outline-none focus:border-[#032817] transition-colors font-dm-sans text-sm disabled:opacity-50"
               />
             </div>
-
             <button
               type="submit"
               disabled={isUpdatingEmail}
@@ -333,7 +340,6 @@ const Settings = () => {
           </form>
         )}
 
-        {/* Profile message */}
         {profileMessage.text && (
           <div
             className={`mx-5 my-3 px-4 py-3 rounded-[12px] ${profileMessage.type === "success" ? "bg-[#DCFCE7] border border-[#BBF7D0]" : "bg-[#FFF0F0] border border-[#FFD0D0]"}`}
@@ -346,7 +352,6 @@ const Settings = () => {
           </div>
         )}
 
-        {/* Admin Email */}
         <div className="flex flex-col gap-1.5 px-5 py-4 border-b border-[rgba(107,107,107,0.10)]">
           <p className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
             Admin Email
@@ -360,8 +365,6 @@ const Settings = () => {
             </p>
           </div>
         </div>
-
-        {/* WhatsApp Business Number */}
         <div className="flex flex-col gap-1.5 px-5 py-4 border-b border-[rgba(107,107,107,0.10)]">
           <p className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
             WhatsApp Business Number
@@ -378,8 +381,6 @@ const Settings = () => {
             communications
           </p>
         </div>
-
-        {/* Currency Symbol */}
         <div className="flex flex-col gap-1.5 px-5 py-4">
           <p className="text-[#2D2D2D] font-medium text-sm font-dm-sans-500">
             Currency Symbol
@@ -410,7 +411,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* ── CARD 2: Sub Admin Management ──────────────────────────── */}
       <div className="relative flex flex-col w-full rounded-[20px] border border-[rgba(107,107,107,0.15)] bg-white px-5 py-5 gap-3">
         <p className="text-[#2D2D2D] font-medium text-base font-dm-sans-500">
           Sub Admin Management
@@ -424,7 +424,6 @@ const Settings = () => {
         >
           Add Sub-Admin (Coming Soon)
         </button>
-
         <div className="flex justify-end mt-2">
           <button
             onClick={handleUpdateProfile}
@@ -452,7 +451,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* ── CARD 3: Danger Zone ───────────────────────────────────── */}
       <div className="flex flex-col w-full rounded-[20px] border border-[#FFD0D0] bg-[#FFF8F8] px-5 py-5 gap-3">
         <p className="text-[#C10007] font-medium text-base font-dm-sans-500">
           Danger Zone
@@ -461,14 +459,14 @@ const Settings = () => {
           Irreversible actions that affect your entire dashboard
         </p>
         <button
-          disabled
-          className="flex justify-center items-center px-5 h-[42px] rounded-[12px] bg-[#D4183D] text-white font-medium text-sm font-clash-grotesk cursor-not-allowed w-fit opacity-80"
+          onClick={() => setShowResetModal(true)}
+          disabled={isResetting}
+          className="flex justify-center items-center px-5 h-[42px] rounded-[12px] bg-[#D4183D] text-white font-medium text-sm font-clash-grotesk hover:bg-[#c41537] transition-colors disabled:opacity-60 cursor-pointer w-fit"
         >
-          Reset Dashboard Data
+          {isResetting ? "Resetting..." : "Reset Dashboard Data"}
         </button>
       </div>
 
-      {/* ── Sign Out ──────────────────────────────────────────────── */}
       <div className="flex w-full items-center justify-between px-5 py-4 rounded-[20px] border border-[rgba(107,107,107,0.15)] bg-white">
         <div className="flex flex-col gap-0.5">
           <p className="text-[#2D2D2D] font-medium text-base font-dm-sans-500">
@@ -487,6 +485,49 @@ const Settings = () => {
           </p>
         </button>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4"
+          onClick={() => setShowResetModal(false)}
+        >
+          <div
+            className="flex flex-col items-start w-[400px] p-6 gap-4 rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1">
+              <p className="text-[#2D2D2D] font-medium text-base font-clash-grotesk">
+                Reset Dashboard
+              </p>
+              <p className="text-[#717182] font-normal text-sm leading-5 font-dm-sans">
+                Are you sure you want to reset the entire dashboard? This will
+                delete all orders, emails, and notifications. Products and
+                categories will NOT be affected. This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-2 w-full justify-end">
+              <button
+                onClick={() => setShowResetModal(false)}
+                disabled={isResetting}
+                className="flex justify-center items-center px-4 h-[40px] rounded-[10px] bg-[#ECECF0] text-[#0A0A0A] font-medium text-sm font-clash-grotesk disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowResetModal(false);
+                  handleResetDashboard();
+                }}
+                disabled={isResetting}
+                className="flex justify-center items-center px-4 h-[40px] rounded-[10px] bg-[#D4183D] text-white font-medium text-sm font-clash-grotesk disabled:opacity-50 cursor-pointer"
+              >
+                {isResetting ? "Resetting..." : "Yes, Reset"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
