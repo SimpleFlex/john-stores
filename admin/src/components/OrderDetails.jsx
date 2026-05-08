@@ -50,16 +50,16 @@ const OrderDetails = ({
     onUpdatePayment?.(value);
   };
 
-  const handleSaveProfit = async () => {
+  const handleSaveProfit = () => {
     if (!finalPrice || !profit) return;
-    try {
-      await onUpdatePayment?.("Paid", {
-        finalPrice: Number(finalPrice),
-        profit: Number(profit),
-      });
-    } catch (error) {
-      console.error("Failed to save profit:", error);
-    }
+    console.log("📤 Saving profit:", {
+      finalPrice: Number(finalPrice),
+      profit: Number(profit),
+    });
+    onUpdatePayment?.("Paid", {
+      finalPrice: Number(finalPrice),
+      profit: Number(profit),
+    });
   };
 
   if (!orderData) return null;
@@ -93,7 +93,6 @@ const OrderDetails = ({
       </div>
 
       <div className="px-[25px] pb-[20px] flex flex-col items-start gap-[20px] mt-[16px]">
-        {/* WhatsApp Message */}
         <div className="flex flex-col w-full gap-[8px]">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Whatsapp Order Message
@@ -105,7 +104,6 @@ const OrderDetails = ({
           </div>
         </div>
 
-        {/* Customer & Recipient */}
         <div className="flex justify-between w-full items-start">
           <div className="flex flex-col items-start gap-1">
             <p className="text-[#717182] font-medium text-xs leading-[14px] font-clash-grotesk">
@@ -131,7 +129,6 @@ const OrderDetails = ({
           </div>
         </div>
 
-        {/* Items Purchased */}
         <div className="flex flex-col w-full gap-[10px]">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Items Purchased
@@ -158,7 +155,6 @@ const OrderDetails = ({
           </div>
         </div>
 
-        {/* Totals */}
         <div className="flex items-center w-full justify-between">
           <div className="flex flex-col gap-[6px]">
             <p className="text-[rgba(113,113,130,0.70)] font-medium text-xs leading-[14px] font-clash-grotesk">
@@ -186,7 +182,6 @@ const OrderDetails = ({
 
         <div className="w-full h-[1px] bg-[#D1D5DC]" />
 
-        {/* Final Price & Profit */}
         <div className="flex flex-col items-start gap-[10px] w-full">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Final Price & Profit
@@ -230,7 +225,6 @@ const OrderDetails = ({
 
         <div className="w-full h-[1px] bg-[#D1D5DC]" />
 
-        {/* Payment Confirmation */}
         <div className="flex flex-col items-start gap-[10px] w-full">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Payment Confirmation
@@ -261,7 +255,6 @@ const OrderDetails = ({
           </div>
         </div>
 
-        {/* Update Order Status */}
         <div className="flex flex-col items-start gap-[10px] w-full">
           <p className="text-[#2D2D2D] font-semibold text-[16px] leading-[16px] tracking-[-0.3px] font-dm-sans-700">
             Update Order Status
