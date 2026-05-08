@@ -56,13 +56,12 @@ const Orders = () => {
             : o,
         ),
       );
-      if (selectedOrder?._id === orderId) {
+      if (selectedOrder?._id === orderId)
         setSelectedOrder((prev) => ({
           ...prev,
           paymentStatus: "Paid",
           orderStatus: "Processing",
         }));
-      }
     } catch (error) {
       console.error("Failed to mark as paid:", error);
     } finally {
@@ -79,9 +78,8 @@ const Orders = () => {
           o._id === orderId ? { ...o, orderStatus: "Completed" } : o,
         ),
       );
-      if (selectedOrder?._id === orderId) {
+      if (selectedOrder?._id === orderId)
         setSelectedOrder((prev) => ({ ...prev, orderStatus: "Completed" }));
-      }
     } catch (error) {
       console.error("Failed to complete order:", error);
     } finally {
@@ -107,17 +105,23 @@ const Orders = () => {
     }
   };
 
-  const handleUpdatePayment = async (status) => {
+  const handleUpdatePayment = async (status, extraData = {}) => {
     if (!selectedOrder) return;
     setIsUpdating(true);
     try {
-      await updatePaymentStatus(selectedOrder._id, status);
+      await updatePaymentStatus(selectedOrder._id, status, extraData);
       setOrders((prev) =>
         prev.map((o) =>
-          o._id === selectedOrder._id ? { ...o, paymentStatus: status } : o,
+          o._id === selectedOrder._id
+            ? { ...o, paymentStatus: status, ...extraData }
+            : o,
         ),
       );
-      setSelectedOrder((prev) => ({ ...prev, paymentStatus: status }));
+      setSelectedOrder((prev) => ({
+        ...prev,
+        paymentStatus: status,
+        ...extraData,
+      }));
     } catch (error) {
       console.error("Failed to update payment:", error);
     } finally {
@@ -169,6 +173,8 @@ const Orders = () => {
     subtotal: order.subtotal,
     deliveryFee: order.deliveryFee,
     total: order.total,
+    finalPrice: order.finalPrice,
+    profit: order.profit,
     paymentStatus: order.paymentStatus,
     orderStatus: order.orderStatus,
     _id: order._id,
@@ -185,24 +191,18 @@ const Orders = () => {
   return (
     <div className="w-full flex flex-col">
       <div className="p-3 lg:p-6">
-        {/* Tabs */}
         <div className="flex justify-start items-center gap-4 lg:gap-6 mb-4 lg:mb-6 border-b border-[rgba(113,113,130,0.45)] overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`pb-3 px-1 lg:px-2 font-medium text-xs lg:text-sm font-clash-grotesk transition-colors whitespace-nowrap cursor-pointer ${
-                activeTab === tab.key
-                  ? "text-[#E3494E] border-b-2 border-[#E3494E]"
-                  : "text-[#717182] hover:text-[#2D2D2D]"
-              }`}
+              className={`pb-3 px-1 lg:px-2 font-medium text-xs lg:text-sm font-clash-grotesk transition-colors whitespace-nowrap cursor-pointer ${activeTab === tab.key ? "text-[#E3494E] border-b-2 border-[#E3494E]" : "text-[#717182] hover:text-[#2D2D2D]"}`}
             >
               {tab.label} ({tab.count})
             </button>
           ))}
         </div>
 
-        {/* Orders Table */}
         <div className="w-full h-auto rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">

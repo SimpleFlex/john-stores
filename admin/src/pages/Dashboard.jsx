@@ -123,13 +123,13 @@ const Dashboard = () => {
           badgeSuffix: s.totalRevenue.label,
         },
         {
-          id: "orders",
-          label: "Total Orders",
-          icon: "/orders.svg",
-          value: s.totalOrders.value,
-          badge: s.totalOrders.trend,
+          id: "profit",
+          label: "Total Profit",
+          icon: "/naira.svg",
+          value: s.totalProfit.value,
+          badge: "+",
           isPositive: true,
-          badgeSuffix: s.totalOrders.label,
+          badgeSuffix: s.totalProfit.label,
         },
         {
           id: "pending",
@@ -172,13 +172,11 @@ const Dashboard = () => {
 
   const handleViewOrder = (order) =>
     navigate(`/orders?orderId=${order.orderId}`);
-
   const handleFilterSelect = (option) => {
     setSelectedFilter(option);
     setFilterOpen(false);
     loadDashboard(option);
   };
-
   const TABLE_MIN_W = "min-w-[780px]";
 
   if (loading) {
@@ -202,7 +200,6 @@ const Dashboard = () => {
             <StatCard key={stat.id} stat={stat} />
           ))}
         </div>
-
         <div className="w-full rounded-[14px] lg:rounded-[18px] border border-[rgba(107,107,107,0.25)] bg-white overflow-hidden">
           <div className="flex items-center w-full px-3 lg:px-[25px] pt-[16px] lg:pt-[24px] pb-3 justify-between">
             <p className="text-[#2D2D2D] font-medium text-sm lg:text-[18px] leading-base tracking-[-0.2px] font-clash-grotesk">
@@ -243,7 +240,6 @@ const Dashboard = () => {
               )}
             </div>
           </div>
-
           <div className="w-full overflow-x-auto">
             <div
               className={`flex items-center ${TABLE_MIN_W} px-[16px] py-[10px] gap-[12px] bg-[#FAFAFA]`}
