@@ -50,11 +50,16 @@ const OrderDetails = ({
     onUpdatePayment?.(value);
   };
 
-  const handleSaveProfit = () => {
-    onUpdatePayment?.("Paid", {
-      finalPrice: Number(finalPrice),
-      profit: Number(profit),
-    });
+  const handleSaveProfit = async () => {
+    if (!finalPrice || !profit) return;
+    try {
+      await onUpdatePayment?.("Paid", {
+        finalPrice: Number(finalPrice),
+        profit: Number(profit),
+      });
+    } catch (error) {
+      console.error("Failed to save profit:", error);
+    }
   };
 
   if (!orderData) return null;
