@@ -1,7 +1,10 @@
 import React from "react";
 import { assets } from "../assets/assets";
+import { useNavigate } from "react-router-dom";
 
 const SwiftSend = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="relative flex h-80 sm:h-130.5 justify-center items-center overflow-hidden">
       {/* Background Image */}
@@ -33,21 +36,29 @@ const SwiftSend = () => {
           </div>
         </div>
 
-        {/* Button */}
+        {/* Buttons */}
         <div className="flex gap-4">
-          <button className="inline-flex gap-1 sm:gap-2 px-4 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-[#00E27C]">
+          <button
+            onClick={() => navigate("/swift-logistics")}
+            className="inline-flex gap-1 sm:gap-2 px-4 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-[#00E27C] cursor-pointer"
+          >
             <p className="font-clash-grotesk text-black text-xs sm:text-sm font-medium leading-6 text-center">
               Send a Package
             </p>
             <img src={assets.black_arrow} alt="" />
           </button>
 
-          <button className="inline-flex gap-1 sm:gap-2 px-4 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-white">
+          <a
+            href="https://wa.me/2349039632833"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex gap-1 sm:gap-2 px-4 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-white cursor-pointer"
+          >
             <img src={assets.black_what} alt="" />
             <p className="font-clash-grotesk text-black text-xs sm:text-sm font-medium leading-6 text-center">
               Talk to Support
             </p>
-          </button>
+          </a>
         </div>
       </div>
     </div>
