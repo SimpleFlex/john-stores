@@ -123,21 +123,14 @@ const JohnCategory = () => {
           {CATEGORIES.map((cat) => {
             const isActive =
               cat === "All" ? activeCategory === "" : activeCategory === cat;
-
             return (
               <button
                 key={cat}
                 onClick={() => handleCategory(cat)}
-                className={`inline-flex px-4 sm:px-6 cursor-pointer py-2 justify-center items-center rounded-[10px] transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? "bg-[#E3494E] shadow-sm"
-                    : "bg-[#FAFAFA] hover:bg-[#F0F0F0]"
-                }`}
+                className={`inline-flex px-4 sm:px-6 cursor-pointer py-2 justify-center items-center rounded-[10px] transition-all duration-200 active:scale-95 ${isActive ? "bg-[#E3494E] shadow-sm" : "bg-[#FAFAFA] hover:bg-[#F0F0F0]"}`}
               >
                 <p
-                  className={`font-dm-sans-500 text-xs font-medium leading-6 text-center transition-colors duration-200 ${
-                    isActive ? "text-white" : "text-black"
-                  }`}
+                  className={`font-dm-sans-500 text-xs font-medium leading-6 text-center transition-colors duration-200 ${isActive ? "text-white" : "text-black"}`}
                 >
                   {cat}
                 </p>
@@ -157,6 +150,7 @@ const JohnCategory = () => {
               image={item.images || item.image}
               name={item.productName || item.name}
               price={item.price}
+              description={item.description}
               reviews={item.reviews}
             />
           ))}
@@ -172,7 +166,6 @@ const JohnCategory = () => {
         </div>
       )}
 
-      {/* Load More button — only shows when 16+ products and not all shown */}
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}

@@ -60,6 +60,7 @@ const FeaturedProducts = () => {
             image={item.images || item.image}
             name={item.productName || item.name}
             price={item.price}
+            description={item.description}
             reviews={item.reviews}
           />
         ))}
