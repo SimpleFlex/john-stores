@@ -195,3 +195,12 @@ export const markAllNotificationsRead = async () => {
   const res = await api.put("/notifications/read-all");
   return res.data;
 };
+
+// ════════════════════════════════════════════════════════════
+// DASHBOARD — Reset
+// ════════════════════════════════════════════════════════════
+
+export const resetDashboard = async () => {
+  const res = await api.post("/dashboard/reset");
+  return res.data;
+};

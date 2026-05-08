@@ -1,5 +1,7 @@
 import Order from "../models/Order.model.js";
 import Product from "../models/Product.model.js";
+import EasyMedia from "../models/Easymedia.model.js";
+import Notification from "../models/Notification.model.js";
 
 // ── GET /api/dashboard ────────────────────────────────────────────
 export const getDashboardStats = async (req, res, next) => {
@@ -30,7 +32,6 @@ export const getDashboardStats = async (req, res, next) => {
 
     const dateFilter = { createdAt: { $gte: startDate } };
 
-    // Run all queries in parallel
     const [
       totalOrders,
       completedOrders,
@@ -154,6 +155,30 @@ export const getDashboardStats = async (req, res, next) => {
         recentOrders: formattedRecentOrders,
         lowStockProducts,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /api/dashboard/reset ─────────────────────────────────────
+export const resetDashboard = async (req, res, next) => {
+  try {
+    // Delete all orders
+    await Order.deleteMany({});
+
+    // Delete all easy media emails
+    await EasyMedia.deleteMany({});
+
+    // Delete all notifications
+    await Notification.deleteMany({});
+
+    // Products and categories are NOT touched
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Dashboard has been reset. All orders, emails, and notifications cleared. Products and categories remain unchanged.",
     });
   } catch (err) {
     next(err);
