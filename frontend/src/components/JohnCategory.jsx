@@ -1,16 +1,31 @@
-import React, { useContext, useState, useMemo } from "react";
+import React, { useContext, useState, useMemo, useEffect } from "react";
 import { assets } from "../assets/assets";
 import { ShopContext } from "../context/ShopContext";
+import { fetchCategories } from "../services/category.service.js";
 import JohnProductItem from "./JohnProductItem";
-
-const CATEGORIES = ["All", "Smartphones", "Audio", "Laptops", "Accessories"];
 
 const JohnCategory = () => {
   const { johnStoresProducts } = useContext(ShopContext);
 
   const [activeCategory, setActiveCategory] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [categories, setCategories] = useState(["All"]);
 
+  // Fetch categories from API filtered by John's Stores
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await fetchCategories();
+        const johnCats = cats.filter((cat) => cat.brand === "John's Stores");
+        setCategories(["All", ...johnCats.map((c) => c.name)]);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Filter products by selected category
   const filtered = useMemo(() => {
     if (!activeCategory) return johnStoresProducts;
     return johnStoresProducts.filter((p) => {
@@ -120,7 +135,7 @@ const JohnCategory = () => {
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 sm:gap-6.25">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isActive =
               cat === "All" ? activeCategory === "" : activeCategory === cat;
             return (
