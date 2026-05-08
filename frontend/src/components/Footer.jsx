@@ -23,9 +23,27 @@ const Footer = () => {
             reliable logistics, quality products and media solutions.
           </p>
           <div className="flex gap-4">
-            <img src={assets.x_icon} alt="" />
-            <img src={assets.ig_icon} alt="" />
-            <img src={assets.tiktok_icon} alt="" />
+            <a
+              href="https://x.com/jegroup_co?s=21"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src={assets.x_icon} alt="X / Twitter" />
+            </a>
+            <a
+              href="https://www.instagram.com/thejohns_enterprises?igsh=ZTd6cDI4aThpdTBn"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src={assets.ig_icon} alt="Instagram" />
+            </a>
+            <a
+              href="https://www.tiktok.com/@swift.logistics_?_r=1&_t=ZS-96BTCMLJV0K"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src={assets.tiktok_icon} alt="TikTok" />
+            </a>
           </div>
         </div>
 
