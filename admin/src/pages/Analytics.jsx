@@ -147,9 +147,6 @@ const Analytics = () => {
                         data={data?.categoryData || []}
                         dataKey="value"
                         outerRadius={80}
-                        label={({ name, percent }) =>
-                          `${name} (${(percent * 100).toFixed(0)}%)`
-                        }
                       >
                         {(data?.categoryData || []).map((entry, index) => (
                           <Cell
