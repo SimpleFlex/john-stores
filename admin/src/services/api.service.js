@@ -9,6 +9,11 @@ export const getDashboardStats = async (filter = "Last 30 Days") => {
   return res.data.data;
 };
 
+export const resetDashboard = async () => {
+  const res = await api.post("/dashboard/reset");
+  return res.data;
+};
+
 // ════════════════════════════════════════════════════════════
 // PRODUCTS
 // ════════════════════════════════════════════════════════════
@@ -81,9 +86,7 @@ export const fetchOrderById = async (id) => {
 };
 
 export const markOrderPaid = async (id) => {
-  const res = await api.put(`/orders/${id}/payment`, {
-    paymentStatus: "Paid",
-  });
+  const res = await api.put(`/orders/${id}/payment`, { paymentStatus: "Paid" });
   return res.data.order;
 };
 
@@ -97,8 +100,15 @@ export const updateOrderStatus = async (id, orderStatus) => {
   return res.data.order;
 };
 
-export const updatePaymentStatus = async (id, paymentStatus) => {
-  const res = await api.put(`/orders/${id}/payment`, { paymentStatus });
+export const updatePaymentStatus = async (
+  id,
+  paymentStatus,
+  extraData = {},
+) => {
+  const res = await api.put(`/orders/${id}/payment`, {
+    paymentStatus,
+    ...extraData,
+  });
   return res.data.order;
 };
 
@@ -193,14 +203,5 @@ export const markNotificationRead = async (id) => {
 
 export const markAllNotificationsRead = async () => {
   const res = await api.put("/notifications/read-all");
-  return res.data;
-};
-
-// ════════════════════════════════════════════════════════════
-// DASHBOARD — Reset
-// ════════════════════════════════════════════════════════════
-
-export const resetDashboard = async () => {
-  const res = await api.post("/dashboard/reset");
   return res.data;
 };

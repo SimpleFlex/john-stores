@@ -39,6 +39,7 @@ export const getDashboardStats = async (req, res, next) => {
       thisMonthRevenueData,
       lastMonthRevenueData,
       allTimeRevenueData,
+      totalProfitData,
       lowStockCount,
       recentOrders,
     ] = await Promise.all([
@@ -65,6 +66,7 @@ export const getDashboardStats = async (req, res, next) => {
         { $match: { paymentStatus: "Paid" } },
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
+      Order.aggregate([{ $group: { _id: null, total: { $sum: "$profit" } } }]),
       Product.countDocuments({ stockQuantity: { $lte: 5 } }),
       Order.find(dateFilter)
         .sort({ createdAt: -1 })
@@ -78,6 +80,7 @@ export const getDashboardStats = async (req, res, next) => {
     const thisMonthTotal = thisMonthRevenueData[0]?.total || 0;
     const lastMonthTotal = lastMonthRevenueData[0]?.total || 0;
     const totalRevenue = allTimeRevenueData[0]?.total || 0;
+    const totalProfit = totalProfitData[0]?.total || 0;
 
     let revenueTrend = "0.0%";
     let revenueIsPositive = true;
@@ -129,10 +132,11 @@ export const getDashboardStats = async (req, res, next) => {
             isPositive: revenueIsPositive,
             label: "vs last month",
           },
-          totalOrders: {
-            value: totalOrders.toString(),
-            trend: totalOrders > 0 ? `${totalOrders} total` : "0 total",
-            label: "total orders",
+          totalProfit: {
+            value: `₦${totalProfit.toLocaleString()}`,
+            trend: "",
+            isPositive: true,
+            label: "all time profit",
           },
           pendingPayments: {
             value: pendingPaymentOrders.toString(),
@@ -164,17 +168,9 @@ export const getDashboardStats = async (req, res, next) => {
 // ── POST /api/dashboard/reset ─────────────────────────────────────
 export const resetDashboard = async (req, res, next) => {
   try {
-    // Delete all orders
     await Order.deleteMany({});
-
-    // Delete all easy media emails
     await EasyMedia.deleteMany({});
-
-    // Delete all notifications
     await Notification.deleteMany({});
-
-    // Products and categories are NOT touched
-
     res.status(200).json({
       success: true,
       message:
