@@ -1,4 +1,4 @@
-import React, { useState, useContext, useMemo } from "react";
+import React, { useState, useContext, useMemo, useEffect } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { buildWhatsAppMessage } from "../utils/WhatsAppMessage";
 import { createOrder } from "../services/order.service.js";
@@ -19,45 +19,66 @@ const CartFormSwift = () => {
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
 
-  const countries = [
-    "Nigeria",
-    "Ghana",
-    "Kenya",
-    "South Africa",
-    "Uganda",
-    "Tanzania",
-    "Rwanda",
-    "Cameroon",
-    "Senegal",
-    "Ethiopia",
-  ];
+  const [countries, setCountries] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
+  const [loadingCities, setLoadingCities] = useState(false);
 
-  const cities = [
-    "Lagos",
-    "Abuja",
-    "Port Harcourt",
-    "Ibadan",
-    "Benin City",
-    "Kano",
-    "Kaduna",
-    "Jos",
-    "Enugu",
-    "Aba",
-    "Warri",
-    "Owerri",
-    "Calabar",
-    "Onitsha",
-    "Sokoto",
-    "Ilorin",
-    "Abeokuta",
-    "Uyo",
-    "Makurdi",
-    "Akure",
-  ];
+  // Fetch all countries on mount
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name",
+        );
+        const data = await res.json();
+        const names = data.map((c) => c.name.common).sort();
+        setCountries(names);
+      } catch (err) {
+        console.error("Failed to fetch countries:", err);
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  // Fetch states/cities when country changes
+  useEffect(() => {
+    if (!country) {
+      setCities([]);
+      return;
+    }
+    const fetchCities = async () => {
+      setLoadingCities(true);
+      setCity("");
+      try {
+        const res = await fetch(
+          "https://countriesnow.space/api/v0.1/countries/states",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ country }),
+          },
+        );
+        const data = await res.json();
+        if (data.data?.states?.length > 0) {
+          setCities(data.data.states.map((s) => s.name).sort());
+        } else {
+          setCities(["No states available — type your city manually"]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch cities:", err);
+        setCities([]);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+    fetchCities();
+  }, [country]);
 
   const cartList = useMemo(() => {
     const list = [];
@@ -74,15 +95,11 @@ const CartFormSwift = () => {
 
   const getPrice = (product) =>
     typeof product.price === "object" ? product.price.current : product.price;
-
   const getImageSrc = (product) => {
     const imgArray = product.images || product.image;
-    if (Array.isArray(imgArray)) {
-      return imgArray[0]?.url || imgArray[0];
-    }
+    if (Array.isArray(imgArray)) return imgArray[0]?.url || imgArray[0];
     return imgArray;
   };
-
   const getProductName = (product) => product.productName || product.name;
 
   const subtotal = cartList.reduce(
@@ -102,8 +119,6 @@ const CartFormSwift = () => {
     if (!city) newErrors.city = "Please select a delivery city";
     if (!deliveryAddress.trim())
       newErrors.deliveryAddress = "Delivery address is required";
-    if (!deliveryDate.trim())
-      newErrors.deliveryDate = "Preferred delivery date is required";
     return newErrors;
   };
 
@@ -117,7 +132,6 @@ const CartFormSwift = () => {
       return;
     }
 
-    // Open WhatsApp FIRST — synchronously before any async calls
     const message = buildWhatsAppMessage({
       senderName,
       senderPhone,
@@ -127,7 +141,7 @@ const CartFormSwift = () => {
       country,
       city,
       deliveryAddress,
-      deliveryDate,
+      deliveryDate: "",
       giftMessage,
       specialInstructions,
       cartList,
@@ -141,7 +155,6 @@ const CartFormSwift = () => {
       `https://wa.me/${whatsappNumber}?text=${encoded}`,
       "_blank",
     );
-
     if (
       !waWindow ||
       waWindow.closed ||
@@ -150,7 +163,6 @@ const CartFormSwift = () => {
       window.location.href = `https://wa.me/${whatsappNumber}?text=${encoded}`;
     }
 
-    // Save order in background
     try {
       await createOrder({
         brand: "Swift Logistics",
@@ -181,21 +193,18 @@ const CartFormSwift = () => {
   };
 
   const inputClass = (field) =>
-    `w-full h-15 px-5.25 rounded-[14px] border ${
-      errors[field] ? "border-[#FB2C36]" : "border-[#D1D5DC]"
-    } outline-none focus:border-[#00A63E] transition-colors`;
+    `w-full h-15 px-5.25 rounded-[14px] border ${errors[field] ? "border-[#FB2C36]" : "border-[#D1D5DC]"} outline-none focus:border-[#00A63E] transition-colors`;
 
   return (
     <div className="bg-[#FAFAFA]">
       <div className="px-4 sm:px-6 md:px-8 py-10 sm:py-12 flex justify-center">
         <div className="flex flex-col xl:flex-row w-full max-w-300 gap-6 xl:gap-10">
-          {/* LEFT SIDE */}
           <div className="flex flex-col flex-1 gap-7.5">
+            {/* Sender Details */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Sender Details
               </p>
-
               <div className="flex flex-col gap-2" id="senderName">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Full Name <span className="text-[#FB2C36]">*</span>
@@ -216,7 +225,6 @@ const CartFormSwift = () => {
                   </p>
                 )}
               </div>
-
               <div className="flex flex-col gap-2" id="senderPhone">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Phone Number <span className="text-[#FB2C36]">*</span>
@@ -237,7 +245,6 @@ const CartFormSwift = () => {
                   </p>
                 )}
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Email (Optional)
@@ -252,11 +259,11 @@ const CartFormSwift = () => {
               </div>
             </div>
 
+            {/* Recipient Details */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Recipient Details
               </p>
-
               <div className="flex flex-col gap-2" id="recipientName">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Recipient Full Name <span className="text-[#FB2C36]">*</span>
@@ -277,7 +284,6 @@ const CartFormSwift = () => {
                   </p>
                 )}
               </div>
-
               <div className="flex flex-col gap-2" id="recipientPhone">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Recipient Phone Number{" "}
@@ -301,6 +307,7 @@ const CartFormSwift = () => {
               </div>
             </div>
 
+            {/* Delivery Details */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Delivery Details
@@ -311,11 +318,15 @@ const CartFormSwift = () => {
                   Delivery Country <span className="text-[#FB2C36]">*</span>
                 </label>
                 <div
-                  onClick={() => setCountryOpen(!countryOpen)}
+                  onClick={() =>
+                    !loadingCountries && setCountryOpen(!countryOpen)
+                  }
                   className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.country ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
                 >
                   <p className={country ? "text-black" : "text-gray-400"}>
-                    {country || "Select Country"}
+                    {loadingCountries
+                      ? "Loading..."
+                      : country || "Select Country"}
                   </p>
                   <img
                     src="/dropdown.svg"
@@ -351,11 +362,17 @@ const CartFormSwift = () => {
                   Delivery City <span className="text-[#FB2C36]">*</span>
                 </label>
                 <div
-                  onClick={() => setCityOpen(!cityOpen)}
-                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.city ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
+                  onClick={() =>
+                    !loadingCities && country && setCityOpen(!cityOpen)
+                  }
+                  className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.city ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white ${country ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
                 >
                   <p className={city ? "text-black" : "text-gray-400"}>
-                    {city || "Select City"}
+                    {!country
+                      ? "Select country first"
+                      : loadingCities
+                        ? "Loading..."
+                        : city || "Select City"}
                   </p>
                   <img
                     src="/dropdown.svg"
@@ -365,7 +382,7 @@ const CartFormSwift = () => {
                 {errors.city && (
                   <p className="text-[#FB2C36] text-xs mt-1">{errors.city}</p>
                 )}
-                {cityOpen && (
+                {cityOpen && cities.length > 0 && (
                   <div className="absolute top-full mt-2 w-full bg-white border border-[#D1D5DC] rounded-[14px] shadow-md z-50 max-h-60 overflow-y-auto">
                     {cities.map((c) => (
                       <div
@@ -405,29 +422,9 @@ const CartFormSwift = () => {
                   </p>
                 )}
               </div>
-
-              <div className="flex flex-col gap-2" id="deliveryDate">
-                <label className="text-[#333] text-sm sm:text-base font-medium">
-                  Preferred Delivery Date{" "}
-                  <span className="text-[#FB2C36]">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={deliveryDate}
-                  onChange={(e) => {
-                    setDeliveryDate(e.target.value);
-                    setErrors((prev) => ({ ...prev, deliveryDate: "" }));
-                  }}
-                  className={inputClass("deliveryDate")}
-                />
-                {errors.deliveryDate && (
-                  <p className="text-[#FB2C36] text-xs mt-1">
-                    {errors.deliveryDate}
-                  </p>
-                )}
-              </div>
             </div>
 
+            {/* Gift Personalization */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Gift Personalization
@@ -465,7 +462,6 @@ const CartFormSwift = () => {
               <p className="text-[#2D2D2D] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Order Summary
               </p>
-
               {cartList.length > 0 ? (
                 cartList.map((item, index) => (
                   <div key={index} className="flex items-start gap-3">
@@ -494,7 +490,6 @@ const CartFormSwift = () => {
                   No items in cart
                 </p>
               )}
-
               <div className="flex justify-between items-center w-full">
                 <p className="text-[#4A5565] opacity-50 text-sm sm:text-base">
                   Subtotal
@@ -528,7 +523,6 @@ const CartFormSwift = () => {
                 </p>
               </div>
             </div>
-
             <div className="flex justify-center items-center px-4 h-20.25 rounded-[14px] border border-[#DBEAFE] bg-[#EFF6FF]">
               <div className="flex gap-2.5 items-center">
                 <img src="/info.svg" alt="" />
@@ -538,7 +532,6 @@ const CartFormSwift = () => {
                 </p>
               </div>
             </div>
-
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleWhatsApp}

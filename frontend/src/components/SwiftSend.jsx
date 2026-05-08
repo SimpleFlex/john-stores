@@ -5,6 +5,13 @@ import { useNavigate } from "react-router-dom";
 const SwiftSend = () => {
   const navigate = useNavigate();
 
+  const handleSendPackage = () => {
+    navigate("/swift-logistics");
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 100);
+  };
+
   return (
     <div className="relative flex h-80 sm:h-130.5 justify-center items-center overflow-hidden">
       {/* Background Image */}
@@ -39,7 +46,7 @@ const SwiftSend = () => {
         {/* Buttons */}
         <div className="flex gap-4">
           <button
-            onClick={() => navigate("/swift-logistics")}
+            onClick={handleSendPackage}
             className="inline-flex gap-1 sm:gap-2 px-4 sm:px-6 py-2 justify-center items-center rounded-[10px] bg-[#00E27C] cursor-pointer"
           >
             <p className="font-clash-grotesk text-black text-xs sm:text-sm font-medium leading-6 text-center">
