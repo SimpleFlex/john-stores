@@ -25,13 +25,34 @@ export const buildWhatsAppMessage = ({
     minute: "2-digit",
   });
 
+  const getProductName = (product) =>
+    product.productName || product.name || "Unknown Item";
+  const getPrice = (product) => {
+    if (typeof product.price === "object") return product.price.current;
+    return product.price;
+  };
+  const getDescription = (product) => product.description || "";
+
   const itemLines = cartList
-    .map(
-      (item, i) =>
-        `  ${i + 1}. ${item.product.name}${
-          item.variantKey !== "default" ? ` (${item.variantKey})` : ""
-        }\n     Qty: ${item.quantity}  ×  ${currency}${item.product.price.toLocaleString()} = ${currency}${(item.product.price * item.quantity).toLocaleString()}`,
-    )
+    .map((item, i) => {
+      const name = getProductName(item.product);
+      const price = getPrice(item.product);
+      const desc = getDescription(item.product);
+      const variantParts = [];
+      if (item.variantKey && item.variantKey !== "default") {
+        if (item.variantKey.includes("-")) {
+          const [size, color] = item.variantKey.split("-");
+          if (size) variantParts.push(`Size: ${size}`);
+          if (color) variantParts.push(`Color: ${color}`);
+        } else {
+          variantParts.push(`Variant: ${item.variantKey}`);
+        }
+      }
+      const variantStr =
+        variantParts.length > 0 ? ` (${variantParts.join(", ")})` : "";
+      const descStr = desc ? `\n     📝 ${desc}` : "";
+      return `  ${i + 1}. ${name}${variantStr}\n     Qty: ${item.quantity}  ×  ${currency}${price?.toLocaleString() || 0} = ${currency}${((price || 0) * item.quantity).toLocaleString()}${descStr}`;
+    })
     .join("\n\n");
 
   const message = `
@@ -55,7 +76,7 @@ export const buildWhatsAppMessage = ({
 - Country: ${country}
 - City:    ${city}
 - Address: ${deliveryAddress}
-- Delivery Date: ${deliveryDate}
+- Delivery Date: ${deliveryDate || "Not specified"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 🛍️ *ORDER ITEMS*

@@ -30,7 +30,6 @@ const ProductForm = () => {
   const [brandOpen, setBrandOpen] = useState(false);
   const [error, setError] = useState("");
 
-  // Color image upload state — track previews per color
   const [colorImagePreviews, setColorImagePreviews] = useState({});
   const [colorImageFiles, setColorImageFiles] = useState({});
 
@@ -48,7 +47,6 @@ const ProductForm = () => {
     loadCategories();
   }, []);
 
-  // Filter categories by selected brand
   const filteredCategories = categories.filter(
     (cat) => !formData.brand || cat.brand === formData.brand,
   );
@@ -56,15 +54,11 @@ const ProductForm = () => {
   const handleChange = (field, value) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
-      // Reset category when brand changes
-      if (field === "brand") {
-        updated.category = "";
-      }
+      if (field === "brand") updated.category = "";
       return updated;
     });
   };
 
-  // ── Image handlers ───────────────────────────────────────────────
   const handleAddImageUrl = () => {
     const trimmed = imageUrlInput.trim();
     if (!trimmed) return;
@@ -105,7 +99,24 @@ const ProductForm = () => {
     }));
   };
 
-  // ── Size handlers ────────────────────────────────────────────────
+  const handleRemoveColorImage = (clr) => {
+    setColorImagePreviews((prev) => {
+      const next = { ...prev };
+      delete next[clr];
+      return next;
+    });
+    setColorImageFiles((prev) => {
+      const next = { ...prev };
+      delete next[clr];
+      return next;
+    });
+    setFormData((prev) => ({
+      ...prev,
+      color: prev.color.filter((c) => c !== clr),
+      colorImages: { ...prev.colorImages, [clr]: undefined },
+    }));
+  };
+
   const handleAddSize = () => {
     const trimmed = sizeInput.trim();
     if (!trimmed || formData.sizeOptions.includes(trimmed)) return;
@@ -123,7 +134,6 @@ const ProductForm = () => {
     }));
   };
 
-  // ── Color handlers ───────────────────────────────────────────────
   const handleAddColor = () => {
     const trimmed = colorInput.trim();
     if (!trimmed || formData.color.includes(trimmed)) return;
@@ -165,12 +175,18 @@ const ProductForm = () => {
     e.target.value = "";
   };
 
+  const getFirstProductImageSrc = () => {
+    if (formData.images.length > 0) return formData.images[0].value;
+    const previews = Object.values(colorImagePreviews);
+    if (previews.length > 0) return previews[0];
+    return null;
+  };
+
   const getCategoryName = () => {
     const cat = filteredCategories.find((c) => c._id === formData.category);
     return cat?.name || "Select Category";
   };
 
-  // ── Submit ───────────────────────────────────────────────────────
   const handleSave = async () => {
     setError("");
     if (!formData.productName.trim()) {
@@ -211,17 +227,12 @@ const ProductForm = () => {
       payload.append("color", JSON.stringify(formData.color));
       payload.append("isFeatured", String(formData.isFeatured));
 
-      // Upload color images as regular images (they'll be in the images array)
-      // We'll handle colorImages mapping after
-      // Upload color images with their color name as field key
       for (const color of formData.color) {
         if (colorImageFiles[color]) {
           payload.append(`colorImage_${color}`, colorImageFiles[color]);
         }
       }
 
-      // Build color image mapping using image indices
-      // We'll send color-to-index mapping
       const fileImages = formData.images.filter((img) => img.type === "file");
       fileImages.forEach((img) => {
         payload.append("images", img.fileObj);
@@ -333,7 +344,7 @@ const ProductForm = () => {
               )}
             </div>
 
-            {/* Category Dropdown — filtered by brand */}
+            {/* Category Dropdown */}
             <div className="flex flex-col w-full items-start gap-1.5 relative">
               <p className="text-[#2D2D2D] font-medium text-base leading-[18px] font-dm-sans-500">
                 Category <span className="text-[#C10007]">*</span>
@@ -468,7 +479,7 @@ const ProductForm = () => {
                   </svg>
                 </button>
               </div>
-              {formData.images.length > 0 && (
+              {formData.images.length > 0 ? (
                 <div className="flex flex-wrap gap-2 w-full">
                   {formData.images.map((img, index) => (
                     <div key={index} className="relative group">
@@ -504,7 +515,45 @@ const ProductForm = () => {
                     </div>
                   ))}
                 </div>
-              )}
+              ) : Object.keys(colorImagePreviews).length > 0 ? (
+                <div className="flex flex-wrap gap-2 w-full">
+                  {Object.entries(colorImagePreviews).map(
+                    ([clr, src], index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={src}
+                          alt={clr}
+                          className="w-[80px] h-[80px] object-cover rounded-[10px] border border-[#D1D5DC]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveColorImage(clr)}
+                          className="absolute -top-2 -right-2 flex justify-center items-center w-[20px] h-[20px] rounded-full bg-[#C10007] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 10 10"
+                            fill="none"
+                          >
+                            <path
+                              d="M2 2l6 6M8 2l-6 6"
+                              stroke="white"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </button>
+                        <div className="absolute bottom-1 left-1 px-1 rounded bg-black/50">
+                          <p className="text-white text-[9px] font-dm-sans">
+                            {clr}
+                          </p>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {/* Price & Stock */}
@@ -636,75 +685,89 @@ const ProductForm = () => {
               </div>
               {formData.color.length > 0 && (
                 <div className="flex flex-col w-full gap-3">
-                  {formData.color.map((clr, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 rounded-[12px] border border-[#D1D5DC] bg-[#FAFAFA]"
-                    >
-                      <div className="flex justify-center items-center h-[32px] px-[14px] gap-[8px] rounded-full border-[0.67px] border-[#0A0A0A] bg-white shrink-0">
-                        <p className="text-[#2D2D2D] font-normal text-xs leading-[14px] font-dm-sans">
-                          {clr}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveColor(index)}
-                          className="flex items-center justify-center w-[14px] h-[14px] rounded-full bg-[#ECECF0] cursor-pointer"
-                        >
-                          <svg
-                            width="8"
-                            height="8"
-                            viewBox="0 0 8 8"
-                            fill="none"
+                  {formData.color.map((clr, index) => {
+                    const previewSrc =
+                      colorImagePreviews[clr] || getFirstProductImageSrc();
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 rounded-[12px] border border-[#D1D5DC] bg-[#FAFAFA]"
+                      >
+                        <div className="flex justify-center items-center h-[32px] px-[14px] gap-[8px] rounded-full border-[0.67px] border-[#0A0A0A] bg-white shrink-0">
+                          <p className="text-[#2D2D2D] font-normal text-xs leading-[14px] font-dm-sans">
+                            {clr}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveColor(index)}
+                            className="flex items-center justify-center w-[14px] h-[14px] rounded-full bg-[#ECECF0] cursor-pointer"
                           >
-                            <path
-                              d="M1.5 1.5l5 5M6.5 1.5l-5 5"
-                              stroke="#0A0A0A"
-                              strokeWidth="1.2"
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 flex-1">
-                        {colorImagePreviews[clr] ? (
-                          <img
-                            src={colorImagePreviews[clr]}
-                            alt={clr}
-                            className="w-10 h-10 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
                             <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="#9CA3AF"
+                              width="8"
+                              height="8"
+                              viewBox="0 0 8 8"
+                              fill="none"
                             >
-                              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                              <path
+                                d="M1.5 1.5l5 5M6.5 1.5l-5 5"
+                                stroke="#0A0A0A"
+                                strokeWidth="1.2"
+                                strokeLinecap="round"
+                              />
                             </svg>
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleColorImageUpload(clr, e)}
-                          className="hidden"
-                          ref={(el) => (colorFileInputRef.current[clr] = el)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            colorFileInputRef.current[clr]?.click()
-                          }
-                          className="text-[#032817] font-dm-sans-500 text-xs underline cursor-pointer"
-                        >
-                          {colorImagePreviews[clr]
-                            ? "Change"
-                            : "Add image for " + clr}
-                        </button>
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 flex-1">
+                          {previewSrc ? (
+                            <div className="relative">
+                              <img
+                                src={previewSrc}
+                                alt={clr}
+                                className="w-10 h-10 object-cover rounded-lg"
+                              />
+                              {!colorImagePreviews[clr] && (
+                                <div className="absolute -bottom-1 -right-1 bg-[#717182] rounded px-1">
+                                  <p className="text-white text-[8px] leading-3">
+                                    default
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="#9CA3AF"
+                              >
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                              </svg>
+                            </div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleColorImageUpload(clr, e)}
+                            className="hidden"
+                            ref={(el) => (colorFileInputRef.current[clr] = el)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              colorFileInputRef.current[clr]?.click()
+                            }
+                            className="text-[#032817] font-dm-sans-500 text-xs underline cursor-pointer"
+                          >
+                            {colorImagePreviews[clr]
+                              ? "Change"
+                              : "Add image for " + clr}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
-import { assets } from "../assets/assets";
 import CartHero from "../components/CartHero";
 
 const Cart = () => {
@@ -35,7 +34,7 @@ const Cart = () => {
             size = s || null;
             color = c || null;
           } else if (variantKey !== "default") {
-            size = variantKey;
+            color = variantKey;
           }
           tempData.push({ _id: items, size, color, quantity, variantKey });
         }
@@ -56,11 +55,11 @@ const Cart = () => {
     swiftProducts.some((p) => p._id == item._id),
   );
 
-  const getImageSrc = (product) => {
+  const getImageSrc = (product, color) => {
+    if (color && product.colorImages?.[color])
+      return product.colorImages[color];
     const imgArray = product.images || product.image;
-    if (Array.isArray(imgArray)) {
-      return imgArray[0]?.url || imgArray[0];
-    }
+    if (Array.isArray(imgArray)) return imgArray[0]?.url || imgArray[0];
     return imgArray;
   };
 
@@ -71,7 +70,6 @@ const Cart = () => {
       <div className="relative w-full">
         <CartHero />
       </div>
-
       <div className="px-4 md:px-8 py-8 sm:py-15 flex flex-col items-start gap-6">
         <div className="flex flex-col items-start gap-2.5">
           <p className="text-[#2D2D2D] font-clash-grotesk text-2xl sm:text-4xl font-medium leading-7 sm:leading-12">
@@ -100,24 +98,21 @@ const Cart = () => {
           </div>
         ) : (
           <div className="flex flex-col xl:flex-row justify-between items-start self-stretch gap-6 xl:gap-10">
-            {/* Product cards */}
             <div className="flex flex-col gap-4 flex-1 w-full">
               {cartData.map((item, index) => {
                 const product = findProduct(item._id);
                 if (!product) return null;
                 const price = getPrice(product);
-
                 return (
                   <div
                     key={index}
                     className="flex flex-row flex-nowrap items-start gap-2.5 p-[17px_16px] rounded-[14px] border border-[#F3F4F6] bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] w-full"
                   >
                     <img
-                      src={getImageSrc(product)}
+                      src={getImageSrc(product, item.color)}
                       alt=""
                       className="w-25 sm:w-36.5 h-22.5 sm:h-32.5 shrink-0 mb-0 mr-3.75 sm:mr-6.25 rounded-lg object-cover"
                     />
-
                     <div className="flex-1 mr-3.75 sm:mr-10">
                       <p className="text-[#2D2D2D] mb-1 sm:mb-2 font-dm-sans-500 text-base sm:text-xl font-semibold leading-5.5 sm:leading-6.25 tracking-[-0.5px]">
                         {getProductName(product)}
@@ -127,7 +122,6 @@ const Cart = () => {
                           {item.variantKey}
                         </p>
                       )}
-
                       <div className="flex w-22.5 sm:w-27.75 h-6.25 sm:h-7.25 gap-5 sm:gap-7.5 justify-center items-center rounded-[10px] border border-[#E5E7EB] mt-4">
                         <img
                           src="/addition.svg"
@@ -148,7 +142,6 @@ const Cart = () => {
                         />
                       </div>
                     </div>
-
                     <div className="flex flex-col items-end gap-10 sm:gap-17.75 w-20 sm:w-29.25">
                       <img
                         src="/cancel.svg"
@@ -179,13 +172,11 @@ const Cart = () => {
               })}
             </div>
 
-            {/* Right-side order summary */}
             <div className="flex w-full xl:w-115 flex-col items-start gap-6.25">
               <div className="flex flex-col items-start gap-2.5 p-6 self-stretch rounded-[14px] border-2 border-[#F3F4F6] bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)]">
                 <p className="text-[#2D2D2D] font-clash-grotesk text-lg sm:text-xl font-medium leading-6.25">
                   Order Summary
                 </p>
-
                 <div className="flex justify-between items-center w-full">
                   <p className="text-[#4A5565] font-dm-sans text-sm sm:text-base font-normal leading-5 tracking-[-0.5px] opacity-50">
                     Subtotal
@@ -195,7 +186,6 @@ const Cart = () => {
                     {subtotal.toLocaleString()}
                   </p>
                 </div>
-
                 <div className="flex justify-between items-center w-full">
                   <p className="text-[#4A5565] font-dm-sans text-sm sm:text-base font-normal leading-5 tracking-[-0.5px] opacity-50">
                     Delivery Fee
@@ -204,7 +194,6 @@ const Cart = () => {
                     To be confirmed
                   </p>
                 </div>
-
                 <div className="flex justify-between items-center w-full">
                   <p className="text-[#4A5565] font-dm-sans text-sm sm:text-base font-medium leading-5 tracking-[-0.5px]">
                     Estimated Total
@@ -214,7 +203,6 @@ const Cart = () => {
                     {subtotal.toLocaleString()}
                   </p>
                 </div>
-
                 <div className="w-full px-6 py-3.75 flex flex-col justify-center items-center rounded-[10px] border border-[#DCFCE7] bg-[#F0FDF4]">
                   <p className="text-[#016630] font-dm-sans text-[8px] sm:text-[10px] font-normal leading-2 sm:leading-3 text-center w-full">
                     Final confirmation and delivery fee will be provided on
@@ -222,7 +210,6 @@ const Cart = () => {
                   </p>
                 </div>
               </div>
-
               <div className="flex flex-col justify-center items-center self-stretch py-5 px-6 rounded-[14px] border border-[#DBEAFE] bg-[#EFF6FF]">
                 <div className="flex justify-center items-center gap-2.5">
                   <img src="/info.svg" alt="" />
@@ -232,9 +219,7 @@ const Cart = () => {
                   </p>
                 </div>
               </div>
-
               <div className="flex flex-col justify-center items-center gap-3.25 self-stretch">
-                {/* John Stores checkout button */}
                 {hasJohn && (
                   <button
                     onClick={() => navigate("/checkout/john-stores")}
@@ -245,8 +230,6 @@ const Cart = () => {
                     </p>
                   </button>
                 )}
-
-                {/* Swift checkout button */}
                 {hasSwift && (
                   <button
                     onClick={() => navigate("/checkout/swift")}
@@ -257,7 +240,6 @@ const Cart = () => {
                     </p>
                   </button>
                 )}
-
                 <button
                   onClick={() => navigate("/swift-logistics")}
                   className="flex flex-col justify-center items-center self-stretch py-7.5 px-4 sm:px-38 rounded-[14px] border-2 border-[rgba(88,87,87,0.15)] bg-white cursor-pointer"
@@ -266,7 +248,6 @@ const Cart = () => {
                     Continue Shopping
                   </p>
                 </button>
-
                 <p className="text-[#6A7282] text-center font-dm-sans text-[12px] font-normal leading-3.5">
                   No payment required at this stage.
                 </p>

@@ -50,6 +50,22 @@ const SwiftCollections = () => {
   const getPrice = (item) =>
     typeof item.price === "object" ? item.price.current : item.price;
 
+  const getProductImage = (item) => {
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      return item.images[0]?.url || item.images[0];
+    }
+    if (item.images && !Array.isArray(item.images)) return item.images;
+    if (item.image) return item.image;
+    if (item.colorImages) {
+      const vals =
+        item.colorImages instanceof Map
+          ? Array.from(item.colorImages.values())
+          : Object.values(item.colorImages);
+      if (vals.length > 0) return vals[0];
+    }
+    return null;
+  };
+
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
       case "price-asc":
@@ -366,7 +382,7 @@ const SwiftCollections = () => {
                 <SwiftProductItem
                   key={index}
                   id={item._id}
-                  image={item.images || item.image}
+                  image={getProductImage(item)}
                   name={item.productName || item.name}
                   price={item.price}
                   description={item.description}

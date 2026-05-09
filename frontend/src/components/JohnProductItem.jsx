@@ -10,6 +10,7 @@ const JohnProductItem = ({ id, name, price, image, reviews, description }) => {
   const [added, setAdded] = useState(false);
   const [flying, setFlying] = useState(false);
   const [flyStyle, setFlyStyle] = useState({});
+  const [imgError, setImgError] = useState(false);
 
   const buttonRef = useRef(null);
 
@@ -89,12 +90,25 @@ const JohnProductItem = ({ id, name, price, image, reviews, description }) => {
         />
       )}
 
-      <div className="w-full aspect-[4/3] overflow-hidden rounded-t-2xl">
-        <img
-          src={getImageSrc()}
-          alt={name}
-          className="w-full h-full object-cover"
-        />
+      {/* Image with fallback */}
+      <div className="w-full aspect-[4/3] overflow-hidden rounded-t-2xl bg-[#F3F4F6] flex items-center justify-center">
+        {!imgError ? (
+          <img
+            src={getImageSrc()}
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center w-full h-full gap-2">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <rect width="24" height="24" rx="4" fill="#E5E7EB" />
+              <path d="M4 15l4-4 3 3 4-5 5 6H4z" fill="#9CA3AF" />
+              <circle cx="8.5" cy="8.5" r="1.5" fill="#9CA3AF" />
+            </svg>
+            <p className="text-[#9CA3AF] text-xs font-dm-sans">No image</p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col p-3 sm:p-4 gap-1.5 sm:gap-3">
@@ -135,7 +149,6 @@ const JohnProductItem = ({ id, name, price, image, reviews, description }) => {
           className="flex gap-2 items-center"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* View Details */}
           <button
             onClick={handleViewDetails}
             className="flex px-4 py-2 justify-center cursor-pointer items-center rounded-[10px] border border-[rgba(227,73,78,0.25)] bg-[rgba(227,73,78,0.03)] shadow-[inset_0_0_36px_0_#EEEFF1]"
@@ -145,7 +158,6 @@ const JohnProductItem = ({ id, name, price, image, reviews, description }) => {
             </p>
           </button>
 
-          {/* Add to Cart */}
           <button
             ref={buttonRef}
             onClick={handleAddToCart}

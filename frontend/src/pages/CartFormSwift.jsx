@@ -6,13 +6,11 @@ import { createOrder } from "../services/order.service.js";
 const CartFormSwift = () => {
   const { cartItems, swiftProducts, currency, navigate } =
     useContext(ShopContext);
-
   const [countryOpen, setCountryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [errors, setErrors] = useState({});
-
   const [senderName, setSenderName] = useState("");
   const [senderPhone, setSenderPhone] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
@@ -21,13 +19,11 @@ const CartFormSwift = () => {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
-
   const [countries, setCountries] = useState([]);
   const [cities, setCities] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
 
-  // Fetch all countries on mount
   useEffect(() => {
     const fetchCountries = async () => {
       try {
@@ -35,8 +31,7 @@ const CartFormSwift = () => {
           "https://restcountries.com/v3.1/all?fields=name",
         );
         const data = await res.json();
-        const names = data.map((c) => c.name.common).sort();
-        setCountries(names);
+        setCountries(data.map((c) => c.name.common).sort());
       } catch (err) {
         console.error("Failed to fetch countries:", err);
       } finally {
@@ -45,8 +40,6 @@ const CartFormSwift = () => {
     };
     fetchCountries();
   }, []);
-
-  // Fetch states/cities when country changes
   useEffect(() => {
     if (!country) {
       setCities([]);
@@ -68,7 +61,7 @@ const CartFormSwift = () => {
         if (data.data?.states?.length > 0) {
           setCities(data.data.states.map((s) => s.name).sort());
         } else {
-          setCities(["No states available — type your city manually"]);
+          setCities(["Type your city manually"]);
         }
       } catch (err) {
         console.error("Failed to fetch cities:", err);
@@ -92,16 +85,16 @@ const CartFormSwift = () => {
     }
     return list;
   }, [cartItems, swiftProducts]);
-
   const getPrice = (product) =>
     typeof product.price === "object" ? product.price.current : product.price;
-  const getImageSrc = (product) => {
+  const getImageSrc = (product, color) => {
+    if (color && product.colorImages?.[color])
+      return product.colorImages[color];
     const imgArray = product.images || product.image;
     if (Array.isArray(imgArray)) return imgArray[0]?.url || imgArray[0];
     return imgArray;
   };
   const getProductName = (product) => product.productName || product.name;
-
   const subtotal = cartList.reduce(
     (acc, item) => acc + getPrice(item.product) * item.quantity,
     0,
@@ -126,12 +119,10 @@ const CartFormSwift = () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      const firstErrorKey = Object.keys(newErrors)[0];
-      const el = document.getElementById(firstErrorKey);
+      const el = document.getElementById(Object.keys(newErrors)[0]);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-
     const message = buildWhatsAppMessage({
       senderName,
       senderPhone,
@@ -148,7 +139,6 @@ const CartFormSwift = () => {
       subtotal,
       currency,
     });
-
     const whatsappNumber = "2349039632833";
     const encoded = encodeURIComponent(message);
     const waWindow = window.open(
@@ -162,7 +152,6 @@ const CartFormSwift = () => {
     ) {
       window.location.href = `https://wa.me/${whatsappNumber}?text=${encoded}`;
     }
-
     try {
       await createOrder({
         brand: "Swift Logistics",
@@ -191,7 +180,6 @@ const CartFormSwift = () => {
       console.error("Failed to save order:", err);
     }
   };
-
   const inputClass = (field) =>
     `w-full h-15 px-5.25 rounded-[14px] border ${errors[field] ? "border-[#FB2C36]" : "border-[#D1D5DC]"} outline-none focus:border-[#00A63E] transition-colors`;
 
@@ -200,7 +188,6 @@ const CartFormSwift = () => {
       <div className="px-4 sm:px-6 md:px-8 py-10 sm:py-12 flex justify-center">
         <div className="flex flex-col xl:flex-row w-full max-w-300 gap-6 xl:gap-10">
           <div className="flex flex-col flex-1 gap-7.5">
-            {/* Sender Details */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Sender Details
@@ -258,8 +245,6 @@ const CartFormSwift = () => {
                 />
               </div>
             </div>
-
-            {/* Recipient Details */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Recipient Details
@@ -306,13 +291,10 @@ const CartFormSwift = () => {
                 )}
               </div>
             </div>
-
-            {/* Delivery Details */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Delivery Details
               </p>
-
               <div className="flex flex-col gap-2 relative w-full" id="country">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery Country <span className="text-[#FB2C36]">*</span>
@@ -356,7 +338,6 @@ const CartFormSwift = () => {
                   </div>
                 )}
               </div>
-
               <div className="flex flex-col gap-2 relative w-full" id="city">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery City <span className="text-[#FB2C36]">*</span>
@@ -400,7 +381,6 @@ const CartFormSwift = () => {
                   </div>
                 )}
               </div>
-
               <div className="flex flex-col gap-2" id="deliveryAddress">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Full Delivery Address{" "}
@@ -423,8 +403,6 @@ const CartFormSwift = () => {
                 )}
               </div>
             </div>
-
-            {/* Gift Personalization */}
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Gift Personalization
@@ -455,8 +433,6 @@ const CartFormSwift = () => {
               </div>
             </div>
           </div>
-
-          {/* RIGHT SIDE — Order Summary */}
           <div className="w-full xl:w-100 flex flex-col gap-6">
             <div className="p-5 sm:p-6.25 flex flex-col gap-5 rounded-[14px] border-2 border-[#F3F4F6] bg-white shadow">
               <p className="text-[#2D2D2D] font-clash-grotesk text-lg sm:text-[22px] font-medium">
@@ -467,7 +443,10 @@ const CartFormSwift = () => {
                   <div key={index} className="flex items-start gap-3">
                     <img
                       className="w-22.5 h-16.25 rounded-lg object-cover"
-                      src={getImageSrc(item.product)}
+                      src={getImageSrc(
+                        item.product,
+                        item.variantKey !== "default" ? item.variantKey : null,
+                      )}
                       alt=""
                     />
                     <div className="flex flex-col gap-1">
@@ -476,7 +455,7 @@ const CartFormSwift = () => {
                       </p>
                       {item.variantKey !== "default" && (
                         <p className="text-[#4A5565] text-xs">
-                          {item.variantKey}
+                          Color: {item.variantKey}
                         </p>
                       )}
                       <p className="text-[#4A5565] text-sm">

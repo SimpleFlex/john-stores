@@ -11,7 +11,6 @@ const JohnCategory = () => {
   const [showAll, setShowAll] = useState(false);
   const [categories, setCategories] = useState(["All"]);
 
-  // Fetch categories from API filtered by John's Stores
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -25,7 +24,6 @@ const JohnCategory = () => {
     loadCategories();
   }, []);
 
-  // Filter products by selected category
   const filtered = useMemo(() => {
     if (!activeCategory) return johnStoresProducts;
     return johnStoresProducts.filter((p) => {
@@ -43,9 +41,24 @@ const JohnCategory = () => {
     setShowAll(false);
   };
 
+  const getProductImage = (item) => {
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      return item.images[0]?.url || item.images[0];
+    }
+    if (item.images && !Array.isArray(item.images)) return item.images;
+    if (item.image) return item.image;
+    if (item.colorImages) {
+      const vals =
+        item.colorImages instanceof Map
+          ? Array.from(item.colorImages.values())
+          : Object.values(item.colorImages);
+      if (vals.length > 0) return vals[0];
+    }
+    return null;
+  };
+
   return (
     <div className="flex w-full min-h-screen flex-col justify-center items-center px-4 sm:px-6 md:px-8 py-10 sm:py-20 bg-[#FFF]">
-      {/* Trust badges row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-20 mb-16 w-full justify-items-center">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center">
@@ -122,7 +135,6 @@ const JohnCategory = () => {
         </div>
       </div>
 
-      {/* Section heading + category filter pills */}
       <div
         id="shopcategory"
         className="w-full flex flex-col items-center text-center mb-10 sm:mb-15 px-4 sm:px-0"
@@ -155,14 +167,13 @@ const JohnCategory = () => {
         </div>
       </div>
 
-      {/* Product grid */}
       {displayProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mx-auto mb-9 sm:mb-17.5">
           {displayProducts.map((item) => (
             <JohnProductItem
               key={item._id}
               id={item._id}
-              image={item.images || item.image}
+              image={getProductImage(item)}
               name={item.productName || item.name}
               price={item.price}
               description={item.description}
