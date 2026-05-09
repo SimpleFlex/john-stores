@@ -10,6 +10,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
 import SwiftProduct from "./components/SwiftProduct";
+import JohnProduct from "./pages/JohnProduct";
 import Cart from "./pages/Cart";
 import { ToastContainer } from "react-toastify";
 import CartForm from "./pages/CartForm";
@@ -35,10 +36,9 @@ const App = () => {
         <Route path="/testimonials" element={<Test />} />
         <Route path="/faqs" element={<Faqs />} />
 
-        {/* FIX: Added missing routes for search navigation */}
         <Route
           path="/john-stores/product/:productId"
-          element={<SwiftProduct />}
+          element={<JohnProduct />}
         />
         <Route
           path="/swift-logistics/product/:productId"

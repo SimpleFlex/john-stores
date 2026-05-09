@@ -21,6 +21,22 @@ const FeaturedProducts = () => {
     loadFeatured();
   }, []);
 
+  const getProductImage = (item) => {
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      return item.images[0]?.url || item.images[0];
+    }
+    if (item.images && !Array.isArray(item.images)) return item.images;
+    if (item.image) return item.image;
+    if (item.colorImages) {
+      const vals =
+        item.colorImages instanceof Map
+          ? Array.from(item.colorImages.values())
+          : Object.values(item.colorImages);
+      if (vals.length > 0) return vals[0];
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center self-stretch bg-[#FAFAFA] px-4 sm:px-6 md:px-8 py-10 sm:py-20">
@@ -57,7 +73,7 @@ const FeaturedProducts = () => {
           <JohnProductItem
             key={index}
             id={item._id}
-            image={item.images || item.image}
+            image={getProductImage(item)}
             name={item.productName || item.name}
             price={item.price}
             description={item.description}

@@ -3,13 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 import { fetchProductById } from "../services/product.service.js";
 
-const SwiftProduct = () => {
+const JohnProduct = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { swiftProducts, johnStoresProducts, currency, addToCart } = useShop();
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [image, setImage] = useState("");
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -23,7 +22,7 @@ const SwiftProduct = () => {
   const handleBackToShop = () => {
     navigate(-1);
     setTimeout(() => {
-      const el = document.getElementById("collections");
+      const el = document.getElementById("shopcategory");
       if (el) el.scrollIntoView({ behavior: "smooth" });
     }, 300);
   };
@@ -31,7 +30,7 @@ const SwiftProduct = () => {
   useEffect(() => {
     const loadProduct = async () => {
       setLoading(true);
-      const allProducts = [...swiftProducts, ...johnStoresProducts];
+      const allProducts = [...johnStoresProducts, ...swiftProducts];
       let found = allProducts.find((item) => item._id === productId);
 
       if (!found) {
@@ -44,23 +43,11 @@ const SwiftProduct = () => {
 
       if (found) {
         setProductData(found);
-        const imgArray = found.images || found.image;
-        if (Array.isArray(imgArray) && imgArray.length > 0) {
-          setImage(imgArray[0]?.url || imgArray[0]);
-        } else if (imgArray && !Array.isArray(imgArray)) {
-          setImage(imgArray);
-        } else if (found.colorImages) {
-          const vals =
-            found.colorImages instanceof Map
-              ? Array.from(found.colorImages.values())
-              : Object.values(found.colorImages);
-          if (vals.length > 0) setImage(vals[0]);
-        }
       }
       setLoading(false);
     };
     loadProduct();
-  }, [productId, swiftProducts, johnStoresProducts]);
+  }, [productId, johnStoresProducts, swiftProducts]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -106,7 +93,7 @@ const SwiftProduct = () => {
           : Object.values(productData.colorImages);
       if (vals.length > 0) return vals[0];
     }
-    return image;
+    return null;
   };
 
   const getProductName = () => productData.productName || productData.name;
@@ -127,7 +114,7 @@ const SwiftProduct = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-[#032817] border-t-transparent animate-spin" />
+          <div className="w-10 h-10 rounded-full border-2 border-[#E3494E] border-t-transparent animate-spin" />
           <p className="text-[#6A7282] font-dm-sans text-sm">
             Loading product...
           </p>
@@ -144,7 +131,7 @@ const SwiftProduct = () => {
         </p>
         <button
           onClick={() => navigate(-1)}
-          className="px-6 py-3 rounded-[10px] bg-[#032817] text-white font-dm-sans-500 cursor-pointer"
+          className="px-6 py-3 rounded-[10px] bg-[#E3494E] text-white font-dm-sans-500 cursor-pointer"
         >
           Go Back
         </button>
@@ -160,7 +147,7 @@ const SwiftProduct = () => {
         className="flex items-center gap-2.5 sm:gap-3.75 cursor-pointer group"
       >
         <img src="/back.svg" alt="" className="w-5 h-5 sm:w-auto sm:h-auto" />
-        <p className="text-[#4A5565] font-clash-grotesk text-base sm:text-xl font-medium leading-6 group-hover:text-[#032817] transition-colors">
+        <p className="text-[#4A5565] font-clash-grotesk text-base sm:text-xl font-medium leading-6 group-hover:text-[#E3494E] transition-colors">
           Back to Shop
         </p>
       </div>
@@ -188,7 +175,7 @@ const SwiftProduct = () => {
           <div className="flex flex-col items-start gap-4 sm:gap-7.5 self-stretch">
             {/* Stock Badge */}
             <div
-              className={`rounded-full px-2.5 py-1 sm:px-3 sm:py-2 border-2 ${isOutOfStock ? "bg-[#FB2C36] border-[#FB2C36]" : "bg-[#032817] border-[#032817]"}`}
+              className={`rounded-full px-2.5 py-1 sm:px-3 sm:py-2 border-2 ${isOutOfStock ? "bg-[#FB2C36] border-[#FB2C36]" : "bg-[#E3494E] border-[#E3494E]"}`}
             >
               <p className="text-white font-dm-sans-700 text-xs sm:text-sm font-semibold leading-4 tracking-[-0.5px]">
                 {isOutOfStock ? "Out of Stock" : "In Stock"}
@@ -206,7 +193,7 @@ const SwiftProduct = () => {
               )}
             </div>
 
-            <p className="text-[#006E3D] font-clash-grotesk font-medium text-xl sm:text-2xl leading-8.75">
+            <p className="text-[#E3494E] font-clash-grotesk font-medium text-xl sm:text-2xl leading-8.75">
               {currency} {getDisplayPrice()?.toLocaleString()}
             </p>
 
@@ -232,7 +219,7 @@ const SwiftProduct = () => {
                         setSizeError(false);
                       }}
                       disabled={isOutOfStock}
-                      className={`flex px-3 sm:px-4.25 py-1.5 sm:py-2 justify-center items-center rounded-[10px] text-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${item === size ? "border-2 border-[#00E27C] bg-[rgba(0,226,124,0.10)] text-[#032817] font-medium" : sizeError ? "border-2 border-[#FB2C36] text-[#6A7282]" : "border-2 border-[#E5E7EB] text-[#6A7282]"}`}
+                      className={`flex px-3 sm:px-4.25 py-1.5 sm:py-2 justify-center items-center rounded-[10px] text-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${item === size ? "border-2 border-[#E3494E] bg-[rgba(227,73,78,0.10)] text-[#E3494E] font-medium" : sizeError ? "border-2 border-[#FB2C36] text-[#6A7282]" : "border-2 border-[#E5E7EB] text-[#6A7282]"}`}
                     >
                       {item}
                     </button>
@@ -289,7 +276,7 @@ const SwiftProduct = () => {
                         title={item}
                         className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-[10px] overflow-hidden border-2 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 ${
                           isSelected
-                            ? "border-[#00E27C] scale-105 shadow-md"
+                            ? "border-[#E3494E] scale-105 shadow-md"
                             : colorError
                               ? "border-[#FB2C36]"
                               : "border-[#E5E7EB] hover:border-[#aaa]"
@@ -361,10 +348,10 @@ const SwiftProduct = () => {
             <button
               onClick={() => validateAndAdd("cart")}
               disabled={isOutOfStock}
-              className={`flex flex-1 sm:flex-none px-5 py-3.5 sm:px-15 sm:py-4 justify-center items-center rounded-[10px] border transition-all duration-200 active:scale-95 ${isOutOfStock ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-60" : addedToCart ? "border-[#00E27C] bg-[rgba(0,226,124,0.10)]" : "border-[rgba(3,40,23,0.25)] bg-[rgba(3,40,23,0.03)] shadow-[inset_0_0_36px_0_#EEEFF1]"}`}
+              className={`flex flex-1 sm:flex-none px-5 py-3.5 sm:px-15 sm:py-4 justify-center items-center rounded-[10px] border transition-all duration-200 active:scale-95 ${isOutOfStock ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-60" : addedToCart ? "border-[#E3494E] bg-[rgba(227,73,78,0.10)]" : "border-[rgba(227,73,78,0.25)] bg-[rgba(227,73,78,0.03)] shadow-[inset_0_0_36px_0_#EEEFF1]"}`}
             >
               <p
-                className={`text-center whitespace-nowrap font-dm-sans-500 text-sm sm:text-base font-medium leading-6 ${isOutOfStock ? "text-gray-400" : addedToCart ? "text-[#032817]" : "text-[#2A2A2A]"}`}
+                className={`text-center whitespace-nowrap font-dm-sans-500 text-sm sm:text-base font-medium leading-6 ${isOutOfStock ? "text-gray-400" : addedToCart ? "text-[#E3494E]" : "text-[#2A2A2A]"}`}
               >
                 {isOutOfStock
                   ? "Out of Stock"
@@ -376,7 +363,7 @@ const SwiftProduct = () => {
             <button
               disabled={isOutOfStock}
               onClick={() => validateAndAdd("buy")}
-              className={`flex flex-1 sm:flex-none px-5 py-3.5 sm:px-15 sm:py-4 justify-center items-center rounded-[10px] transition-all duration-200 active:scale-95 ${isOutOfStock ? "bg-gray-300 cursor-not-allowed text-gray-400 opacity-60" : "bg-[#032817] shadow-md text-white"}`}
+              className={`flex flex-1 sm:flex-none px-5 py-3.5 sm:px-15 sm:py-4 justify-center items-center rounded-[10px] transition-all duration-200 active:scale-95 ${isOutOfStock ? "bg-gray-300 cursor-not-allowed text-gray-400 opacity-60" : "bg-[#E3494E] shadow-md text-white"}`}
             >
               <p className="text-center font-dm-sans-500 text-sm sm:text-base whitespace-nowrap font-medium leading-6">
                 Buy Now
@@ -390,4 +377,4 @@ const SwiftProduct = () => {
   );
 };
 
-export default SwiftProduct;
+export default JohnProduct;

@@ -46,10 +46,26 @@ export const getDashboardStats = async (req, res, next) => {
       Order.countDocuments(dateFilter),
       Order.countDocuments({ ...dateFilter, orderStatus: "Completed" }),
       Order.countDocuments({ ...dateFilter, paymentStatus: "Pending" }),
+
+      // This month revenue — uses finalPrice if set, otherwise total
       Order.aggregate([
         { $match: { paymentStatus: "Paid", ...dateFilter } },
-        { $group: { _id: null, total: { $sum: "$total" } } },
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: {
+                $cond: {
+                  if: { $gt: ["$finalPrice", 0] },
+                  then: "$finalPrice",
+                  else: "$total",
+                },
+              },
+            },
+          },
+        },
       ]),
+
       Order.aggregate([
         {
           $match: {
@@ -62,12 +78,31 @@ export const getDashboardStats = async (req, res, next) => {
         },
         { $group: { _id: null, total: { $sum: "$total" } } },
       ]),
+
+      // All time revenue — uses finalPrice if set, otherwise total
       Order.aggregate([
         { $match: { paymentStatus: "Paid" } },
-        { $group: { _id: null, total: { $sum: "$total" } } },
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: {
+                $cond: {
+                  if: { $gt: ["$finalPrice", 0] },
+                  then: "$finalPrice",
+                  else: "$total",
+                },
+              },
+            },
+          },
+        },
       ]),
+
+      // Total profit
       Order.aggregate([{ $group: { _id: null, total: { $sum: "$profit" } } }]),
+
       Product.countDocuments({ stockQuantity: { $lte: 5 } }),
+
       Order.find(dateFilter)
         .sort({ createdAt: -1 })
         .limit(5)

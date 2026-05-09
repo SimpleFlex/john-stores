@@ -141,7 +141,36 @@ export const updateProduct = async (req, res, next) => {
       color,
       isFeatured,
       removeImageIds,
+      removeColorImages,
     } = req.body;
+
+    // Remove deleted color images from Cloudinary
+    if (removeColorImages) {
+      let removedColors = [];
+      try {
+        removedColors = JSON.parse(removeColorImages);
+      } catch {
+        removedColors = Array.isArray(removeColorImages)
+          ? removeColorImages
+          : [];
+      }
+      for (const clr of removedColors) {
+        const oldUrl = product.colorImages?.get?.(clr);
+        if (oldUrl) {
+          try {
+            const publicId = oldUrl
+              .split("/")
+              .slice(-2)
+              .join("/")
+              .split(".")[0];
+            await cloudinary.uploader.destroy(publicId);
+          } catch (e) {
+            // ignore cleanup errors
+          }
+          product.colorImages.delete(clr);
+        }
+      }
+    }
 
     // Remove deleted images from Cloudinary
     if (removeImageIds) {

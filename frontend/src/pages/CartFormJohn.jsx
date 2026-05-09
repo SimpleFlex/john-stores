@@ -6,19 +6,16 @@ import { createOrder } from "../services/order.service.js";
 const CartFormJohn = () => {
   const { cartItems, johnStoresProducts, currency, navigate } =
     useContext(ShopContext);
-
   const [countryOpen, setCountryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [errors, setErrors] = useState({});
-
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
-
   const [countries, setCountries] = useState([]);
   const [cities, setCities] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
@@ -31,8 +28,7 @@ const CartFormJohn = () => {
           "https://restcountries.com/v3.1/all?fields=name",
         );
         const data = await res.json();
-        const names = data.map((c) => c.name.common).sort();
-        setCountries(names);
+        setCountries(data.map((c) => c.name.common).sort());
       } catch (err) {
         console.error("Failed to fetch countries:", err);
       } finally {
@@ -41,7 +37,6 @@ const CartFormJohn = () => {
     };
     fetchCountries();
   }, []);
-
   useEffect(() => {
     if (!country) {
       setCities([]);
@@ -87,10 +82,11 @@ const CartFormJohn = () => {
     }
     return list;
   }, [cartItems, johnStoresProducts]);
-
   const getPrice = (product) =>
     typeof product.price === "object" ? product.price.current : product.price;
-  const getImageSrc = (product) => {
+  const getImageSrc = (product, color) => {
+    if (color && product.colorImages?.[color])
+      return product.colorImages[color];
     const imgArray = product.images || product.image;
     if (Array.isArray(imgArray)) return imgArray[0]?.url || imgArray[0];
     return imgArray;
@@ -116,12 +112,10 @@ const CartFormJohn = () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      const firstErrorKey = Object.keys(newErrors)[0];
-      const el = document.getElementById(firstErrorKey);
+      const el = document.getElementById(Object.keys(newErrors)[0]);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-
     const message = buildWhatsAppMessage({
       senderName: name,
       senderPhone: phone,
@@ -138,7 +132,6 @@ const CartFormJohn = () => {
       subtotal,
       currency,
     });
-
     const whatsappNumber = "2349039632833";
     const encoded = encodeURIComponent(message);
     const waWindow = window.open(
@@ -152,7 +145,6 @@ const CartFormJohn = () => {
     ) {
       window.location.href = `https://wa.me/${whatsappNumber}?text=${encoded}`;
     }
-
     try {
       await createOrder({
         brand: "John's Stores",
@@ -239,7 +231,6 @@ const CartFormJohn = () => {
                 />
               </div>
             </div>
-
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Delivery Details
@@ -287,7 +278,6 @@ const CartFormJohn = () => {
                   </div>
                 )}
               </div>
-
               <div className="flex flex-col gap-2 relative w-full" id="city">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Delivery City <span className="text-[#FB2C36]">*</span>
@@ -331,7 +321,6 @@ const CartFormJohn = () => {
                   </div>
                 )}
               </div>
-
               <div className="flex flex-col gap-2" id="deliveryAddress">
                 <label className="text-[#333] text-sm sm:text-base font-medium">
                   Full Delivery Address{" "}
@@ -354,7 +343,6 @@ const CartFormJohn = () => {
                 )}
               </div>
             </div>
-
             <div className="flex p-5 sm:p-7.5 flex-col gap-5 rounded-2xl bg-white shadow">
               <p className="text-[#1A1A1A] font-clash-grotesk text-lg sm:text-[22px] font-medium">
                 Additional Information
@@ -373,7 +361,6 @@ const CartFormJohn = () => {
               </div>
             </div>
           </div>
-
           <div className="w-full xl:w-100 flex flex-col gap-6">
             <div className="p-5 sm:p-6.25 flex flex-col gap-5 rounded-[14px] border-2 border-[#F3F4F6] bg-white shadow">
               <p className="text-[#2D2D2D] font-clash-grotesk text-lg sm:text-[22px] font-medium">
@@ -384,7 +371,10 @@ const CartFormJohn = () => {
                   <div key={index} className="flex items-start gap-3">
                     <img
                       className="w-22.5 h-16.25 rounded-lg object-cover"
-                      src={getImageSrc(item.product)}
+                      src={getImageSrc(
+                        item.product,
+                        item.variantKey !== "default" ? item.variantKey : null,
+                      )}
                       alt=""
                     />
                     <div className="flex flex-col gap-1">
@@ -393,7 +383,7 @@ const CartFormJohn = () => {
                       </p>
                       {item.variantKey !== "default" && (
                         <p className="text-[#4A5565] text-xs">
-                          {item.variantKey}
+                          Color: {item.variantKey}
                         </p>
                       )}
                       <p className="text-[#4A5565] text-sm">

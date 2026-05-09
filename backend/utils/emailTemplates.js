@@ -24,12 +24,12 @@ const baseTemplate = (content) => `
             <td style="background-color:${brandDark};padding:30px 40px;text-align:center;">
               <table cellpadding="0" cellspacing="0" align="center">
                 <tr>
-                 <td style="width:40px;height:40px;">
-  <img src="https://res.cloudinary.com/dqjtvdxgm/image/upload/v1777932541/Vector_mupdqf.png" alt="John's Enterprise" style="width:40px;height:40px;object-fit:contain;" />
-</td>
-<td style="padding-left:12px;text-align:left;">
-  <p style="color:#FFF;font-size:14px;font-weight:600;margin:0;line-height:1.3;">John's<br/>Enterprise</p>
-</td>
+                  <td style="width:40px;height:40px;">
+                    <img src="https://res.cloudinary.com/dqjtvdxgm/image/upload/v1777932541/Vector_mupdqf.png" alt="John's Enterprise" style="width:40px;height:40px;object-fit:contain;" />
+                  </td>
+                  <td style="padding-left:12px;text-align:left;">
+                    <p style="color:#FFF;font-size:14px;font-weight:600;margin:0;line-height:1.3;">John's<br/>Enterprise</p>
+                  </td>
                 </tr>
               </table>
             </td>
@@ -72,11 +72,26 @@ export const orderConfirmationTemplate = (order) => {
     ?.map(
       (item) => `
       <tr>
-        <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;">
-          <p style="color:${textDark};font-size:14px;font-weight:500;margin:0;">${item.name} x${item.quantity}</p>
-          ${item.size ? `<p style="color:${textGray};font-size:12px;margin:2px 0 0;">Size: ${item.size}</p>` : ""}
+        <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;vertical-align:top;">
+          <table cellpadding="0" cellspacing="0">
+            <tr>
+              ${
+                item.image
+                  ? `
+              <td style="width:50px;padding-right:12px;vertical-align:top;">
+                <img src="${item.image}" alt="${item.name}" style="width:50px;height:50px;border-radius:8px;object-fit:cover;" />
+              </td>
+              `
+                  : ""
+              }
+              <td style="vertical-align:top;">
+                <p style="color:${textDark};font-size:14px;font-weight:500;margin:0;">${item.name} x${item.quantity}</p>
+                ${item.size ? `<p style="color:${textGray};font-size:12px;margin:2px 0 0;">Size: ${item.size}</p>` : ""}
+              </td>
+            </tr>
+          </table>
         </td>
-        <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;text-align:right;">
+        <td style="padding:8px 0;border-bottom:1px solid #F0F0F0;text-align:right;vertical-align:top;">
           <p style="color:${brandDark};font-size:14px;font-weight:600;margin:0;">₦${(item.price * item.quantity).toLocaleString()}</p>
         </td>
       </tr>
@@ -129,7 +144,7 @@ export const orderConfirmationTemplate = (order) => {
       </tr>
       <tr>
         <td style="padding:12px 0;border-top:2px solid #F0F0F0;">
-          <p style="color:${textDark};font-size:16px;font-weight:700;margin:0;">Total</p>
+          <p style="color:${textDark};font-size:16px;font-weight:700;margin:0;">Estimated Total</p>
         </td>
         <td style="padding:12px 0;border-top:2px solid #F0F0F0;text-align:right;">
           <p style="color:${brandRed};font-size:18px;font-weight:700;margin:0;">₦${order.total?.toLocaleString() || 0}</p>
@@ -154,6 +169,9 @@ export const orderConfirmationTemplate = (order) => {
 
 // ── Payment Confirmation Email ───────────────────────────────────
 export const paymentConfirmedTemplate = (order) => {
+  const displayAmount = order.finalPrice > 0 ? order.finalPrice : order.total;
+  const wasNegotiated = order.finalPrice > 0;
+
   const content = `
     <div style="text-align:center;">
       <div style="width:64px;height:64px;background-color:#DCFCE7;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
@@ -171,7 +189,23 @@ export const paymentConfirmedTemplate = (order) => {
         <tr>
           <td>
             <p style="color:${textGray};font-size:13px;margin:0 0 4px 0;">Amount Paid</p>
-            <p style="color:${brandDark};font-size:22px;font-weight:700;margin:0;">₦${order.total?.toLocaleString() || 0}</p>
+            <p style="color:${brandDark};font-size:22px;font-weight:700;margin:0;">₦${displayAmount?.toLocaleString() || 0}</p>
+            ${
+              wasNegotiated
+                ? `
+            <table cellpadding="0" cellspacing="0" style="margin-top:8px;">
+              <tr>
+                <td style="background-color:#F0FDF4;border:1px solid #DCFCE7;border-radius:8px;padding:8px 12px;">
+                  <p style="color:#016630;font-size:12px;margin:0;">
+                    💰 Final agreed price: ₦${order.finalPrice?.toLocaleString()}<br/>
+                    <span style="font-size:11px;color:#6B6B6B;">Original price: ₦${order.total?.toLocaleString() || 0}</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+            `
+                : ""
+            }
           </td>
           <td style="text-align:right;">
             <span style="display:inline-block;background-color:${brandDark};color:#FFF;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;">Processing</span>

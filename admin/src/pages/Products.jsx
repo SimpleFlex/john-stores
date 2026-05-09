@@ -45,18 +45,27 @@ const Products = () => {
     setLoading(true);
     try {
       const data = await fetchProducts();
-      const normalized = data.products.map((p) => ({
-        id: p._id,
-        image: p.images?.[0]?.url || "/api/placeholder/60/60",
-        name: p.productName,
-        brand: p.brand,
-        brandIcon:
-          p.brand === "John's Stores" ? "/john-stores.svg" : "/swift-log.svg",
-        category: p.category?.name || p.category || "-",
-        price: p.price,
-        stock: p.stockQuantity,
-        status: p.status,
-      }));
+      const normalized = data.products.map((p) => {
+        const firstColorImage =
+          p.colorImages instanceof Map
+            ? Array.from(p.colorImages.values())[0]
+            : p.colorImages && typeof p.colorImages === "object"
+              ? Object.values(p.colorImages)[0]
+              : null;
+
+        return {
+          id: p._id,
+          image: p.images?.[0]?.url || p.images?.[0] || firstColorImage || null,
+          name: p.productName,
+          brand: p.brand,
+          brandIcon:
+            p.brand === "John's Stores" ? "/john-stores.svg" : "/swift-log.svg",
+          category: p.category?.name || p.category || "-",
+          price: p.price,
+          stock: p.stockQuantity,
+          status: p.status,
+        };
+      });
       setProducts(normalized);
     } catch (error) {
       console.error("Failed to load products:", error);
@@ -105,10 +114,6 @@ const Products = () => {
           </div>
         </div>
 
-        {/* ── Scrollable table wrapper ──────────────────────────────
-            The key fix: the outer div must be `w-full overflow-x-auto`
-            and must NOT have any padding/gap that swallows the scroll.
-            The inner table div gets the fixed min-width.            */}
         <div className="w-full overflow-x-auto">
           <div className="min-w-[786px]">
             {/* Header row */}
@@ -159,11 +164,32 @@ const Products = () => {
                   >
                     {/* Image */}
                     <div className="flex items-center w-[97px] h-[65px] px-[2px] shrink-0">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-[60px] h-[60px] object-cover rounded"
-                      />
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-[60px] h-[60px] object-cover rounded"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.nextSibling.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className="w-[60px] h-[60px] rounded bg-[#F3F4F6] items-center justify-center"
+                        style={{ display: product.image ? "none" : "flex" }}
+                      >
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <rect width="24" height="24" rx="4" fill="#E5E7EB" />
+                          <path d="M4 15l4-4 3 3 4-5 5 6H4z" fill="#9CA3AF" />
+                          <circle cx="8.5" cy="8.5" r="1.5" fill="#9CA3AF" />
+                        </svg>
+                      </div>
                     </div>
 
                     {/* Name */}
