@@ -1,4 +1,10 @@
-import React, { useState, useContext, useMemo, useEffect } from "react";
+import React, {
+  useState,
+  useContext,
+  useMemo,
+  useEffect,
+  useCallback,
+} from "react";
 import { ShopContext } from "../context/ShopContext";
 import { buildWhatsAppMessage } from "../utils/WhatsAppMessage";
 import { createOrder } from "../services/order.service.js";
@@ -27,23 +33,26 @@ const CartForm1 = () => {
   const [cities, setCities] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
+  const [countryError, setCountryError] = useState(false);
+
+  const fetchCountries = useCallback(async () => {
+    setLoadingCountries(true);
+    setCountryError(false);
+    try {
+      const res = await fetch("https://countriesnow.space/api/v0.1/countries");
+      const data = await res.json();
+      setCountries(data.data.map((c) => c.country).sort());
+    } catch (err) {
+      console.error("Failed to fetch countries:", err);
+      setCountryError(true);
+    } finally {
+      setLoadingCountries(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchCountries = async () => {
-      try {
-        const res = await fetch(
-          "https://restcountries.com/v3.1/all?fields=name",
-        );
-        const data = await res.json();
-        setCountries(data.map((c) => c.name.common).sort());
-      } catch (err) {
-        console.error("Failed to fetch countries:", err);
-      } finally {
-        setLoadingCountries(false);
-      }
-    };
     fetchCountries();
-  }, []);
+  }, [fetchCountries]);
 
   useEffect(() => {
     if (!country) {
@@ -331,21 +340,36 @@ const CartForm1 = () => {
                 </label>
                 <div
                   onClick={() =>
-                    !loadingCountries && setCountryOpen(!countryOpen)
+                    !loadingCountries &&
+                    !countryError &&
+                    setCountryOpen(!countryOpen)
                   }
                   className={`flex w-full h-15 px-5.25 items-center justify-between rounded-[14px] border ${errors.country ? "border-[#FB2C36]" : "border-[#D1D5DC]"} bg-white cursor-pointer`}
                 >
                   <p className={country ? "text-black" : "text-gray-400"}>
                     {loadingCountries
-                      ? "Loading..."
-                      : country || "Select Country"}
+                      ? "Loading countries..."
+                      : countryError
+                        ? "Failed to load"
+                        : country || "Select Country"}
                   </p>
                   <img
                     src="/dropdown.svg"
                     className={`w-4 h-4 transition-transform duration-200 ${countryOpen ? "rotate-180" : ""}`}
                   />
                 </div>
-                {errors.country && (
+                {countryError && (
+                  <p className="text-[#FB2C36] text-xs mt-1">
+                    Failed to load countries.{" "}
+                    <button
+                      onClick={fetchCountries}
+                      className="underline font-medium"
+                    >
+                      Retry
+                    </button>
+                  </p>
+                )}
+                {errors.country && !countryError && (
                   <p className="text-[#FB2C36] text-xs mt-1">
                     {errors.country}
                   </p>
